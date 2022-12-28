@@ -38,7 +38,7 @@ public class HomeFragment extends Fragment {
         mCardAdapter = new CardAdapter();
         mRecyclerView.setAdapter(mCardAdapter);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(),LinearLayoutManager.VERTICAL,false));
-        homeViewModel.getCardLiveData().observe(this.getActivity(),cardsUpdateObserver);
+        homeViewModel.getCardLiveData().observe(getViewLifecycleOwner(),cardsUpdateObserver);
         return root;
     }
 
