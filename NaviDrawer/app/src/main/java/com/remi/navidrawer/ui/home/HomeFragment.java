@@ -26,6 +26,7 @@ public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
     public CardAdapter mCardAdapter;
+    public CardAdapter mCardAdapter2;
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         HomeViewModel homeViewModel =
@@ -34,20 +35,39 @@ public class HomeFragment extends Fragment {
         View root = binding.getRoot();
 
 
-        RecyclerView mRecyclerView = binding.recycleCards;
+        RecyclerView introRecyclerView = binding.introCards;
         mCardAdapter = new CardAdapter();
-        mRecyclerView.setAdapter(mCardAdapter);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(),LinearLayoutManager.VERTICAL,false));
-        homeViewModel.getCardLiveData().observe(getViewLifecycleOwner(),cardsUpdateObserver);
+        introRecyclerView.setAdapter(mCardAdapter);
+        introRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(),LinearLayoutManager.VERTICAL,false));
+
+
+        RecyclerView guideRecyclerView = binding.userGuideCards;
+        mCardAdapter2 = new CardAdapter();
+        guideRecyclerView.setAdapter(mCardAdapter2);
+        guideRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(),LinearLayoutManager.VERTICAL,false));
+
+        homeViewModel.getIntroCardLiveData().observe(getViewLifecycleOwner(),introCardsUpdateObserver);
+        homeViewModel.getGuideCardLiveData().observe(getViewLifecycleOwner(),guideCardsUpdateObserver);
+
         return root;
+
     }
 
-    Observer<ArrayList<Cards>>  cardsUpdateObserver = new Observer<ArrayList<Cards>>() {
+    Observer<ArrayList<Cards>>  introCardsUpdateObserver = new Observer<ArrayList<Cards>>() {
         @Override
         public void onChanged(@NonNull ArrayList<Cards> cards) {
             mCardAdapter.updateCardsList(cards);
         }
     };
+
+    Observer<ArrayList<Cards>>  guideCardsUpdateObserver = new Observer<ArrayList<Cards>>() {
+        @Override
+        public void onChanged(@NonNull ArrayList<Cards> cards) {
+            mCardAdapter2.updateCardsList(cards);
+        }
+    };
+
+
 
 
     @Override
