@@ -7,17 +7,24 @@
     tools:context=".Runtime_measureactivity">
 
     <org.opencv.android.JavaCameraView
+        android:id="@+id/javaCameraView"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:id="@+id/javaCameraView"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         tools:ignore="MissingConstraints" />
+
     <ImageButton
+        android:id="@+id/switchCameraButton2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/switchCameraButton2"
-        app:layout_constraintBottom_toTopOf="parent"
-        app:layout_constraintLeft_toRightOf="parent"
-        app:layout_constraintRight_toLeftOf="parent"
-        android:src="@drawable/ic_switch_front"/>
+        android:elevation="2dp"
+        android:background="@null"
+        android:src="@drawable/ic_switch_front"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
