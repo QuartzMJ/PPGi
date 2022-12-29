@@ -92,17 +92,21 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         javaCameraView = findViewById(R.id.javaCameraView);
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
+        javaCameraView.setMaxFrameSize(480,854);
+        javaCameraView.setCameraIndex(cameraId);
+
+        ImageButton switchCameraBtn = findViewById(R.id.switchCameraButton2);
+        switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
         findViewById(R.id.switchCameraButton2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 cameraId = cameraId^1;
                 javaCameraView.disableView();
                 javaCameraView.setCameraIndex(cameraId);
-                ImageButton switchCamera = findViewById(R.id.switchCameraButton2);
                 if(cameraId == 0)
-                    switchCamera.setBackgroundResource(R.drawable.ic_switch_front);
+                    switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
                 else
-                    switchCamera.setBackgroundResource(R.drawable.ic_switch_back);
+                    switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_back);
                 javaCameraView.enableView();
             }
         });

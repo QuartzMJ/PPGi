@@ -18,11 +18,10 @@
 
     <ImageButton
         android:id="@+id/switchCameraButton2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
         android:elevation="2dp"
         android:background="@null"
-        android:src="@drawable/ic_switch_front"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
