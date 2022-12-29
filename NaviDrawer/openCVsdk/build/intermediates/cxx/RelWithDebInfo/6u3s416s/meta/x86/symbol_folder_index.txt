@@ -1,0 +1,1 @@
+C:\Users\Remi\AndroidStudioProjects\PPGi\NaviDrawer\openCVsdk\build\intermediates\cxx\RelWithDebInfo\6u3s416s\obj\x86
