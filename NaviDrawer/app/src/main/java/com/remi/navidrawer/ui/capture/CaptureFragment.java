@@ -128,19 +128,6 @@ public class CaptureFragment extends Fragment {
                     .format(System.currentTimeMillis());
 
 
-           /* ContentValues contentValues = new ContentValues();
-            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
-            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
-
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                contentValues.put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/CameraX-Video");
-            }
-
-            MediaStoreOutputOptions mediaStoreOutputOptions = new MediaStoreOutputOptions
-                    .Builder(getActivity().getContentResolver(), MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
-                    .setContentValues(contentValues)
-                    .build();*/
-
             String filename =  Environment.getExternalStoragePublicDirectory("ppgi")+"/" + name +".mp4";
             File file = new File(filename);
             FileOutputOptions fileOutputOptions = new FileOutputOptions.Builder(file).build();

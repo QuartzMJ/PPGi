@@ -22,7 +22,7 @@
         android:theme="@style/Theme.NaviDrawer"
         tools:targetApi="31">
         <activity
-            android:name=".measureactivity"
+            android:name=".Runtime_measureactivity"
             android:exported="false">
             <meta-data
                 android:name="android.app.lib_name"

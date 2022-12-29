@@ -1,0 +1,2 @@
+ninja: Entering directory `C:\Users\Remi\AndroidStudioProjects\PPGi\NaviDrawer\openCVsdk\.cxx\Debug\5w3l4746\x86_64'
+ninja: no work to do.
