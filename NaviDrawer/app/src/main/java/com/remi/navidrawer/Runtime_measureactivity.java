@@ -56,7 +56,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private static final Scalar FACE_RECT_COLOR     = new Scalar(0, 255, 0, 255);
 
 
-    private BaseLoaderCallback baseLoaderCallback = new BaseLoaderCallback(this) {
+    private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
             switch (status) {
@@ -117,17 +117,89 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     public void onResume() {
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, baseLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mBaseLoaderCallback);
         } else {
-            baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+            mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
+        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface,"lbpcascade_frontalface.xml");
     }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+       /* Mat frame = inputFrame.rgba();
+        Mat mGray = new Mat();
+        Imgproc.cvtColor(frame,mGray,Imgproc.COLOR_BGR2GRAY);
+
+        if (mAbsoluteFaceSize == 0) {
+            int height = mGray.rows();
+            if (Math.round(height * mRelativeFaceSize) > 0) {
+                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+            }
+        }
+
+        MatOfRect faces = new MatOfRect();
+
+        if (mFaceDetector != null) {
+            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2,new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+        }
+
+        Rect[] facesArray = faces.toArray();*/
         return inputFrame.rgba();
+
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (javaCameraView != null) {
+            javaCameraView.disableView();
+        }
+    }
+
+    @Override
+    public void onCameraViewStarted(int width, int height) {
+    }
+
+    @Override
+    public void onCameraViewStopped() {
+    }
+
+    private CascadeClassifier loadDetector(int rawID,String fileName) {
+        CascadeClassifier classifier = null;
+        try {
+
+            // load cascade file from application resources
+            InputStream is = getResources().openRawResource(rawID);
+            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+            mCascadeFile = new File(cascadeDir, fileName);
+            FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            is.close();
+            os.close();
+
+            Log.e(TAG, "start to load file:  " + mCascadeFile.getAbsolutePath());
+            classifier = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+            if (classifier.empty()) {
+                Log.e(TAG, "Failed to load cascade classifier");
+                classifier = null;
+            } else
+                Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+
+            cascadeDir.delete();
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
+        }
+        return classifier;
+    }
 
     private boolean allPermissionsGranted() {
         for (String permission : Configuration.REQUIRED_PERMISSIONS) {
@@ -152,14 +224,4 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                         new String[]{Manifest.permission.CAMERA,
                                 Manifest.permission.RECORD_AUDIO};
     }
-
-
-    @Override
-    public void onCameraViewStarted(int width, int height) {
-    }
-
-    @Override
-    public void onCameraViewStopped() {
-    }
-
 }
