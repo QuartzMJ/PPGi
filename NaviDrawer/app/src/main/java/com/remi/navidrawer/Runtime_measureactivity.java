@@ -171,7 +171,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         MatOfRect faces = new MatOfRect();
 
         if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }
 
 
@@ -181,7 +181,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
                 Mat faceROI = mGray.submat(facesArray[i]);
                 MatOfRect noses = new MatOfRect();
-                mNoseDetector.detectMultiScale(faceROI, noses, 1, 2, 2,
+                mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
                         new Size(30, 30));
 
                 Rect[] nosesArray = noses.toArray();
@@ -207,11 +207,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             for (int i = 0; i < facesArray.length; i++) {
                 Mat faceROI = mGray.submat(facesArray[i]);
                 MatOfRect noses = new MatOfRect();
-                mNoseDetector.detectMultiScale(faceROI, noses, 1, 2, 2,
+                mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
                         new Size(30, 30));
             }
         }
-
         return frame;
 
 
