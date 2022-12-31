@@ -2,6 +2,7 @@ package com.remi.navidrawer;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import android.content.Intent;
 
 import android.Manifest;
@@ -47,13 +48,14 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
     private JavaCameraView javaCameraView;
     private int cameraId = 0;
-    private CascadeClassifier mFaceDetector,mNoseDetector;
-    private Mat                    mGray;
-    private File                   mCascadeFile;
-    private static final String    TAG                 = "OCVSample::Activity";
-    private float                  mRelativeFaceSize   = 0.2f;
-    private int                    mAbsoluteFaceSize   = 0;
-    private static final Scalar FACE_RECT_COLOR     = new Scalar(0, 255, 0, 255);
+    private CascadeClassifier mFaceDetector, mNoseDetector;
+    private Mat mGray;
+    private File mCascadeFile;
+    private static final String TAG = "OCVSample::Activity";
+    private float mRelativeFaceSize = 0.2f;
+    private int mAbsoluteFaceSize = 0;
+    private int mBoundingState;  // 0 for no bounds, 1 for bounds
+    private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -84,7 +86,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_measureactivity);
         if (allPermissionsGranted()) {
-            Log.d("Test","Magic works");
+            Log.d("Test", "Magic works");
         } else {
             ActivityCompat.requestPermissions(this, Configuration.REQUIRED_PERMISSIONS,
                     Configuration.REQUEST_CODE_PERMISSIONS);
@@ -92,7 +94,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         javaCameraView = findViewById(R.id.javaCameraView);
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
-        javaCameraView.setMaxFrameSize(480,854);
+        javaCameraView.setMaxFrameSize(960, 720);
         javaCameraView.setCameraIndex(cameraId);
         javaCameraView.enableFpsMeter();
         javaCameraView.setScreenOrientation(getResources().getConfiguration().orientation);
@@ -100,13 +102,14 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
         ImageButton switchCameraBtn = findViewById(R.id.switchCameraButton2);
         switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
+
         findViewById(R.id.switchCameraButton2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                cameraId = cameraId^1;
+                cameraId = cameraId ^ 1;
                 javaCameraView.disableView();
                 javaCameraView.setCameraIndex(cameraId);
-                if(cameraId == 0)
+                if (cameraId == 0)
                     switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
                 else
                     switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_back);
@@ -114,6 +117,16 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
         });
 
+        setBoundingState(1);
+        findViewById(R.id.boundingBoxSwitcher).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (getBoundingState() == 1)
+                    setBoundingState(0);
+                else
+                    setBoundingState(1);
+            }
+        });
     }
 
     @Override
@@ -124,14 +137,14 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         } else {
             mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
-        mFaceDetector = loadDetector(R.raw.haarcascade_frontalface_alt,"haarcascade_frontalface_alt.xml");
-        mNoseDetector = loadDetector(R.raw.haarcascade_mcs_nose,"haarcascade_mcs_nose.xml");
+        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
+        mNoseDetector = loadDetector(R.raw.haarcascade_mcs_nose, "haarcascade_mcs_nose.xml");
     }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         Mat frame = new Mat();
-        if(getResources().getConfiguration().orientation == 1 ) {
+        if (getResources().getConfiguration().orientation == 1) {
             Mat reversedFrame = inputFrame.rgba();
             if (cameraId == 0) {
                 Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 270, 1);
@@ -140,12 +153,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 90, 1);
                 Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
             }
-        }else{
-             frame = inputFrame.rgba();
+        } else {
+            frame = inputFrame.rgba();
         }
 
         Mat mGray = new Mat();
-        Imgproc.cvtColor(frame,mGray,Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(frame, mGray, Imgproc.COLOR_BGR2GRAY);
 
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
@@ -154,40 +167,48 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
         }
 
-       // code runs well til mGray but has problems in the next if condition statement
+        // code runs well til mGray but has problems in the next if condition statement
         MatOfRect faces = new MatOfRect();
 
         if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2,new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+            mFaceDetector.detectMultiScale(mGray, faces, 1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }
 
 
-
         Rect[] facesArray = faces.toArray();
-        for (int i = 0; i < facesArray.length; i++) {
+        if (getBoundingState() == 1) {
+            for (int i = 0; i < facesArray.length; i++) {
 
-            Mat faceROI = mGray.submat(facesArray[i]);
-            MatOfRect noses = new MatOfRect();
-            mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
-                    new Size(30, 30));
+                Mat faceROI = mGray.submat(facesArray[i]);
+                MatOfRect noses = new MatOfRect();
+                mNoseDetector.detectMultiScale(faceROI, noses, 1, 2, 2,
+                        new Size(30, 30));
 
-            Rect[] nosesArray = noses.toArray();
-            try {
+                Rect[] nosesArray = noses.toArray();
+                try {
 
-                if (nosesArray != null) {
-                    Imgproc.rectangle(frame,
-                            new Point(facesArray[i].tl().x + nosesArray[0].tl().x, facesArray[i].tl().y + nosesArray[0].tl().y),
-                            new Point(facesArray[i].tl().x + nosesArray[0].br().x, facesArray[i].tl().y + nosesArray[0].br().y),
-                            FACE_RECT_COLOR, 3);
+                    if (nosesArray != null) {
+                        Imgproc.rectangle(frame,
+                                new Point(facesArray[i].tl().x + nosesArray[0].tl().x, facesArray[i].tl().y + nosesArray[0].tl().y),
+                                new Point(facesArray[i].tl().x + nosesArray[0].br().x, facesArray[i].tl().y + nosesArray[0].br().y),
+                                FACE_RECT_COLOR, 3);
 
-                    Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+                        Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
 
+                    }
+                } catch (Exception e) {
+
+                    e.printStackTrace();
+                    return frame;
                 }
             }
-            catch (Exception e) {
 
-                e.printStackTrace();
-                return frame;
+        } else {
+            for (int i = 0; i < facesArray.length; i++) {
+                Mat faceROI = mGray.submat(facesArray[i]);
+                MatOfRect noses = new MatOfRect();
+                mNoseDetector.detectMultiScale(faceROI, noses, 1, 2, 2,
+                        new Size(30, 30));
             }
         }
 
@@ -212,7 +233,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     public void onCameraViewStopped() {
     }
 
-    private CascadeClassifier loadDetector(int rawID,String fileName) {
+    private CascadeClassifier loadDetector(int rawID, String fileName) {
         CascadeClassifier classifier = null;
         try {
 
@@ -271,5 +292,13 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                                 Manifest.permission.WRITE_EXTERNAL_STORAGE} :
                         new String[]{Manifest.permission.CAMERA,
                                 Manifest.permission.RECORD_AUDIO};
+    }
+
+    public void setBoundingState(int value) {
+        mBoundingState = value;
+    }
+
+    public int getBoundingState() {
+        return mBoundingState;
     }
 }
