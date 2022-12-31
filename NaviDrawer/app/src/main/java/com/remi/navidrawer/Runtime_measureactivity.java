@@ -94,6 +94,9 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         javaCameraView.setCvCameraViewListener(this);
         javaCameraView.setMaxFrameSize(480,854);
         javaCameraView.setCameraIndex(cameraId);
+        javaCameraView.enableFpsMeter();
+        javaCameraView.setScreenOrientation(getResources().getConfiguration().orientation);
+
 
         ImageButton switchCameraBtn = findViewById(R.id.switchCameraButton2);
         switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
@@ -121,12 +124,26 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         } else {
             mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
-        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface,"lbpcascade_frontalface.xml");
+        mFaceDetector = loadDetector(R.raw.haarcascade_frontalface_alt,"haarcascade_frontalface_alt.xml");
+        mNoseDetector = loadDetector(R.raw.haarcascade_mcs_nose,"haarcascade_mcs_nose.xml");
     }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-       /* Mat frame = inputFrame.rgba();
+        Mat frame = new Mat();
+        if(getResources().getConfiguration().orientation == 1 ) {
+            Mat reversedFrame = inputFrame.rgba();
+            if (cameraId == 0) {
+                Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 270, 1);
+                Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
+            } else {
+                Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 90, 1);
+                Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
+            }
+        }else{
+             frame = inputFrame.rgba();
+        }
+
         Mat mGray = new Mat();
         Imgproc.cvtColor(frame,mGray,Imgproc.COLOR_BGR2GRAY);
 
@@ -137,14 +154,45 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
         }
 
+       // code runs well til mGray but has problems in the next if condition statement
         MatOfRect faces = new MatOfRect();
 
         if (mFaceDetector != null) {
             mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2,new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }
 
-        Rect[] facesArray = faces.toArray();*/
-        return inputFrame.rgba();
+
+
+        Rect[] facesArray = faces.toArray();
+        for (int i = 0; i < facesArray.length; i++) {
+
+            Mat faceROI = mGray.submat(facesArray[i]);
+            MatOfRect noses = new MatOfRect();
+            mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
+                    new Size(30, 30));
+
+            Rect[] nosesArray = noses.toArray();
+            try {
+
+                if (nosesArray != null) {
+                    Imgproc.rectangle(frame,
+                            new Point(facesArray[i].tl().x + nosesArray[0].tl().x, facesArray[i].tl().y + nosesArray[0].tl().y),
+                            new Point(facesArray[i].tl().x + nosesArray[0].br().x, facesArray[i].tl().y + nosesArray[0].br().y),
+                            FACE_RECT_COLOR, 3);
+
+                    Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+
+                }
+            }
+            catch (Exception e) {
+
+                e.printStackTrace();
+                return frame;
+            }
+        }
+
+        return frame;
+
 
     }
 

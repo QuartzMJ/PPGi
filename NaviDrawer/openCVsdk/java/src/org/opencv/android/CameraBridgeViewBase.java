@@ -40,6 +40,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     private CvCameraViewListener2 mListener;
     private boolean mSurfaceExist;
     private final Object mSyncObject = new Object();
+    private int screenOrientation;
 
     protected int mFrameWidth;
     protected int mFrameHeight;
@@ -57,6 +58,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     public static final int CAMERA_ID_FRONT = 98;
     public static final int RGBA = 1;
     public static final int GRAY = 2;
+
 
     public CameraBridgeViewBase(Context context, int cameraId) {
         super(context);
@@ -431,6 +433,52 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                 if (BuildConfig.DEBUG) {
                     Log.d(TAG, "mStretch value: " + mScale);
                 }
+                // Start of the fix
+                Matrix matrix = new Matrix();
+                matrix.preTranslate((canvas.getWidth() - mCacheBitmap.getWidth()) / 2f, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2f);
+                float scale = (float) canvas.getWidth() / (float) mCacheBitmap.getHeight();
+                matrix.postScale(scale, scale, canvas.getWidth() / 2f, canvas.getHeight() / 2f);
+                canvas.drawBitmap(mCacheBitmap, matrix, null);
+                // Back to original OpenCV code
+                if (mFpsMeter != null) {
+                    mFpsMeter.measure();
+                    mFpsMeter.draw(canvas, 20, 30);
+                }
+                getHolder().unlockCanvasAndPost(canvas);
+            }
+        }
+
+    }
+
+
+   /* protected void deliverAndDrawFrame(CvCameraViewFrame frame) {
+        Mat modified;
+
+        if (mListener != null) {
+            modified = mListener.onCameraFrame(frame);
+        } else {
+            modified = frame.rgba();
+        }
+
+        boolean bmpValid = true;
+        if (modified != null) {
+            try {
+                Utils.matToBitmap(modified, mCacheBitmap);
+            } catch(Exception e) {
+                Log.e(TAG, "Mat type: " + modified);
+                Log.e(TAG, "Bitmap type: " + mCacheBitmap.getWidth() + "*" + mCacheBitmap.getHeight());
+                Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
+                bmpValid = false;
+            }
+        }
+
+        if (bmpValid && mCacheBitmap != null) {
+            Canvas canvas = getHolder().lockCanvas();
+            if (canvas != null) {
+                canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "mStretch value: " + mScale);
+                }
 
                 // Start of the fix
                 if(mCameraIndex == 0) {
@@ -459,7 +507,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             }
         }
 
-    }
+    }*/
     /*protected void deliverAndDrawFrame(CvCameraViewFrame frame) {
         Mat modified;
 
@@ -574,5 +622,13 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         }
 
         return new Size(calcWidth, calcHeight);
+    }
+
+    public void setScreenOrientation(int screenOrientation){
+        this.screenOrientation = screenOrientation;
+    }
+
+    public int getScreenOrientation(){
+        return screenOrientation;
     }
 }
