@@ -17,6 +17,7 @@
         tools:ignore="MissingConstraints" />
 
     <TextView
+        android:id="@+id/tv_heartrate"
         android:layout_width="120dp"
         android:layout_height="120dp"
         app:layout_constraintTop_toTopOf="parent"

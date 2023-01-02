@@ -54,7 +54,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private static final String TAG = "OCVSample::Activity";
     private float mRelativeFaceSize = 0.2f;
     private int mAbsoluteFaceSize = 0;
-    private int mBoundingState;  // 0 for no bounds, 1 for bounds
+    private int mPlotState;      // 0 for no bounds, 1 for bounds
+    private int mBoundingState;  // 0 for no plots, 1 for plots
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     private ArrayList<RawPPGIValue> mRawPPGIVals;
 
@@ -134,6 +135,23 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     setBoundingState(1);
             }
         });
+
+        // 0 for no plots, 1 for plots
+        findViewById(R.id.plotRuntimeHeartRate).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (getPlotState() == 1) {
+                    setPlotState(0);
+                    setBoundingState(0);
+                    findViewById(R.id.tv_heartrate).setVisibility(View.INVISIBLE);
+                }
+                else{
+                    setPlotState(1);
+                    setBoundingState(1);
+                    findViewById(R.id.tv_heartrate).setVisibility(View.VISIBLE);
+                }
+            }
+        });
     }
 
     @Override
@@ -190,7 +208,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 MatOfRect noses = new MatOfRect();
                 mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
                         new Size(30, 30));
-
+                if (getPlotState() == 1)
+                    calculateRaw(noses);
                 Rect[] nosesArray = noses.toArray();
                 try {
 
@@ -308,9 +327,17 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         return mBoundingState;
     }
 
+    public void setPlotState(int value) {mPlotState = value;}
+
+    public int getPlotState() {return mPlotState;}
+
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState){
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelableArrayList("Value List",  mRawPPGIVals);
+    }
+
+    public void calculateRaw(MatOfRect rect){
+
     }
 }
