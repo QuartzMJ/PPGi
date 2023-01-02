@@ -4,7 +4,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.content.Intent;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -43,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import com.remi.navidrawer.RawPPGIValue;
 
 public class Runtime_measureactivity extends CameraActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -56,6 +56,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private int mAbsoluteFaceSize = 0;
     private int mBoundingState;  // 0 for no bounds, 1 for bounds
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
+    private ArrayList<RawPPGIValue> mRawPPGIVals;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -91,6 +92,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             ActivityCompat.requestPermissions(this, Configuration.REQUIRED_PERMISSIONS,
                     Configuration.REQUEST_CODE_PERMISSIONS);
         }
+        if (savedInstanceState == null) {
+            mRawPPGIVals = new ArrayList<RawPPGIValue>();
+        }else{
+            mRawPPGIVals = savedInstanceState.getParcelableArrayList("Value List");
+        }
+
         javaCameraView = findViewById(R.id.javaCameraView);
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
@@ -299,5 +306,11 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
     public int getBoundingState() {
         return mBoundingState;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState){
+        super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putParcelableArrayList("Value List",  mRawPPGIVals);
     }
 }
