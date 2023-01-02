@@ -15,6 +15,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -41,6 +42,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import com.remi.navidrawer.RawPPGIValue;
 
@@ -58,6 +60,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private int mBoundingState;  // 0 for no plots, 1 for plots
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     private ArrayList<RawPPGIValue> mRawPPGIVals;
+    private ArrayList<RawPPGIValue> mPeakPPGIVals;
+    private RawPPGIValue mFrontValue;
+    private RawPPGIValue mMiddleValue;
+    private RawPPGIValue mRearValue;
+    private RawPPGIValue mLastPeakValue;
+    private RawPPGIValue mCurrentPeakValue;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -95,8 +103,16 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         }
         if (savedInstanceState == null) {
             mRawPPGIVals = new ArrayList<RawPPGIValue>();
+            mPeakPPGIVals = new ArrayList<RawPPGIValue>();
+            mFrontValue = null;
+            mRearValue = null;
+            mMiddleValue = null;
         }else{
-            mRawPPGIVals = savedInstanceState.getParcelableArrayList("Value List");
+            mRawPPGIVals = savedInstanceState.getParcelableArrayList("RawValue List");
+            mPeakPPGIVals = savedInstanceState.getParcelableArrayList("PeakValue List");
+            mFrontValue = savedInstanceState.getParcelable("Front");
+            mMiddleValue = savedInstanceState.getParcelable("Middle");
+            mRearValue = savedInstanceState.getParcelable("Rear");
         }
 
         javaCameraView = findViewById(R.id.javaCameraView);
@@ -334,10 +350,45 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState){
         super.onSaveInstanceState(savedInstanceState);
-        savedInstanceState.putParcelableArrayList("Value List",  mRawPPGIVals);
+        savedInstanceState.putParcelableArrayList("RawValue List",  mRawPPGIVals);
+        savedInstanceState.putParcelableArrayList("PeakValue List",  mPeakPPGIVals);
+        savedInstanceState.putParcelable("Front", mFrontValue);
+        savedInstanceState.putParcelable("Middle", mMiddleValue);
+        savedInstanceState.putParcelable("Rear",mRearValue);
     }
 
     public void calculateRaw(MatOfRect rect){
+        // calculate Raw values here
+    }
 
+    public void addAndDetermine(Float rawValue)
+    {
+        mRearValue = new RawPPGIValue(rawValue, Calendar.getInstance());
+        mRawPPGIVals.add(mRearValue);
+
+        if( (mFrontValue != null) && (mMiddleValue != null) )
+        {
+            //statement to do determination here
+            if( (mMiddleValue.getValue() > mFrontValue.getValue() && ( mMiddleValue.getValue() > mRearValue.getValue())))
+            {
+                mLastPeakValue = mPeakPPGIVals.get(mPeakPPGIVals.size() - 1);
+                mCurrentPeakValue = mMiddleValue;
+                mPeakPPGIVals.add(mMiddleValue);
+                showHeartbeat();
+            }
+        }
+        // Update indicator values
+        mFrontValue = mMiddleValue;
+        mMiddleValue = mRearValue;
+    }
+
+    public long calculateTimeInterval(){
+        return mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
+    }
+
+    public void showHeartbeat(){
+         int bpm = Math.round(1/calculateTimeInterval());
+        TextView tv =(TextView) (findViewById(R.id.tv_heartrate));
+        tv.setText(Integer.toString(bpm));
     }
 }
