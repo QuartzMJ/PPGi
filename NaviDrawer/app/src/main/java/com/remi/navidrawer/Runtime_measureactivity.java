@@ -3,20 +3,17 @@ package com.remi.navidrawer;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import android.content.Intent;
 import android.Manifest;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
@@ -24,10 +21,8 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.videoio.VideoCapture;
-import org.opencv.videoio.VideoWriter;
-import org.opencv.android.Utils;
-import org.opencv.core.CvType;
+import org.opencv.core.Core;
+import org.opencv.core.MatOfDouble;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
@@ -38,13 +33,16 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import com.remi.navidrawer.RawPPGIValue;
+import java.util.Locale;
 
 public class Runtime_measureactivity extends CameraActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -56,8 +54,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private static final String TAG = "OCVSample::Activity";
     private float mRelativeFaceSize = 0.2f;
     private int mAbsoluteFaceSize = 0;
-    private int mPlotState;      // 0 for no bounds, 1 for bounds
-    private int mBoundingState;  // 0 for no plots, 1 for plots
+    private int mPlotState;      // 0 for no plots, 1 for plots
+    private int mBoundingState;  // 0 for no bounds, 1 for bounds
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     private ArrayList<RawPPGIValue> mRawPPGIVals;
     private ArrayList<RawPPGIValue> mPeakPPGIVals;
@@ -66,6 +64,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private RawPPGIValue mRearValue;
     private RawPPGIValue mLastPeakValue;
     private RawPPGIValue mCurrentPeakValue;
+    private String mOutputFilename;
+    private long mCurrentMiliseconds;
+    private ArrayList<Integer> mBpmCandidates;
+    private int mCountDowns = 0;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -107,7 +109,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mFrontValue = null;
             mRearValue = null;
             mMiddleValue = null;
-        }else{
+        } else {
             mRawPPGIVals = savedInstanceState.getParcelableArrayList("RawValue List");
             mPeakPPGIVals = savedInstanceState.getParcelableArrayList("PeakValue List");
             mFrontValue = savedInstanceState.getParcelable("Front");
@@ -152,18 +154,18 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
         });
 
+        mBpmCandidates = new ArrayList<Integer>();
         // 0 for no plots, 1 for plots
+        setPlotState(1);
+        findViewById(R.id.tv_heartrate).setVisibility(View.VISIBLE);
         findViewById(R.id.plotRuntimeHeartRate).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (getPlotState() == 1) {
                     setPlotState(0);
-                    setBoundingState(0);
                     findViewById(R.id.tv_heartrate).setVisibility(View.INVISIBLE);
-                }
-                else{
+                } else {
                     setPlotState(1);
-                    setBoundingState(1);
                     findViewById(R.id.tv_heartrate).setVisibility(View.VISIBLE);
                 }
             }
@@ -185,6 +187,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         Mat frame = new Mat();
+        // in case of portrait, set the frame into correct rotation
         if (getResources().getConfiguration().orientation == 1) {
             Mat reversedFrame = inputFrame.rgba();
             if (cameraId == 0) {
@@ -198,35 +201,35 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             frame = inputFrame.rgba();
         }
 
+        // convert frame into gray scale for later detection
         Mat mGray = new Mat();
         Imgproc.cvtColor(frame, mGray, Imgproc.COLOR_BGR2GRAY);
 
-        if (mAbsoluteFaceSize == 0) {
+        //  absolute face size initialization
+        if (mAbsoluteFaceSize == 0) {    // only called at the beginning of the activity
             int height = mGray.rows();
             if (Math.round(height * mRelativeFaceSize) > 0) {
                 mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
             }
         }
 
-        // code runs well til mGray but has problems in the next if condition statement
+        // container for multiple detected faces, in our case only one for heart rate measurement
         MatOfRect faces = new MatOfRect();
-
         if (mFaceDetector != null) {
             mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }
 
-
+        // convert into array for indexing
         Rect[] facesArray = faces.toArray();
-        if (getBoundingState() == 1) {
+        if (getBoundingState() == 1 && facesArray.length > 0) {
             for (int i = 0; i < facesArray.length; i++) {
 
-                Mat faceROI = mGray.submat(facesArray[i]);
+                Mat faceROI = mGray.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
                 MatOfRect noses = new MatOfRect();
                 mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
                         new Size(30, 30));
-                if (getPlotState() == 1)
-                    calculateRaw(noses);
-                Rect[] nosesArray = noses.toArray();
+
+                Rect[] nosesArray = noses.toArray();       // take out the value from the array one by one, in this case only one iteration
                 try {
 
                     if (nosesArray != null) {
@@ -237,6 +240,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
                         Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
 
+                        if (getPlotState() == 1) {        //  start measurement only in need
+                            Mat noseROI = mGray.submat(nosesArray[0]);
+                            Point tmp = facesArray[i].tl();
+                            mCurrentMiliseconds = Calendar.getInstance().getTimeInMillis();
+                            startMeasure(faceROI, frame, tmp);
+                        }
                     }
                 } catch (Exception e) {
 
@@ -343,52 +352,211 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         return mBoundingState;
     }
 
-    public void setPlotState(int value) {mPlotState = value;}
-
-    public int getPlotState() {return mPlotState;}
-
-    @Override
-    public void onSaveInstanceState(Bundle savedInstanceState){
-        super.onSaveInstanceState(savedInstanceState);
-        savedInstanceState.putParcelableArrayList("RawValue List",  mRawPPGIVals);
-        savedInstanceState.putParcelableArrayList("PeakValue List",  mPeakPPGIVals);
-        savedInstanceState.putParcelable("Front", mFrontValue);
-        savedInstanceState.putParcelable("Middle", mMiddleValue);
-        savedInstanceState.putParcelable("Rear",mRearValue);
+    public void setPlotState(int value) {
+        mPlotState = value;
     }
 
-    public void calculateRaw(MatOfRect rect){
+    public int getPlotState() {
+        return mPlotState;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putParcelableArrayList("RawValue List", mRawPPGIVals);
+        savedInstanceState.putParcelableArrayList("PeakValue List", mPeakPPGIVals);
+        savedInstanceState.putParcelable("Front", mFrontValue);
+        savedInstanceState.putParcelable("Middle", mMiddleValue);
+        savedInstanceState.putParcelable("Rear", mRearValue);
+    }
+
+    public void startMeasure(Mat face, Mat frame, Point startingPoint) throws Exception {
+
+        int foreheadHeight = face.rows() / 3;
+        int foreheadWidth = face.cols();
+
+        int startingX = (int) startingPoint.x;
+        int startingY = (int) startingPoint.y;
+
+
+        Rect foreheadROI = new Rect(startingX, startingY, foreheadWidth, foreheadHeight);
+        Mat croppedFrame = new Mat(frame, foreheadROI);
+        calculateRaw(croppedFrame.clone());
+    }
+
+    public void calculateRaw(Mat forehead)  {
+        List<Mat> channels = new ArrayList<Mat>();
+        Core.split(forehead, channels);
+        Mat mGreenChannel = channels.get(1);
+
+        MatOfDouble mMeanValue = new MatOfDouble();
+        MatOfDouble mStdDev = new MatOfDouble();
+        Core.meanStdDev(mGreenChannel, mMeanValue, mStdDev);
+        Double mean = mMeanValue.toList().get(0);
+        Float tmp = mean.floatValue();
+        addAndDetermine(tmp);
         // calculate Raw values here
     }
 
-    public void addAndDetermine(Float rawValue)
-    {
-        mRearValue = new RawPPGIValue(rawValue, Calendar.getInstance());
-        mRawPPGIVals.add(mRearValue);
+    public void addAndDetermine(Float rawValue)  {
+        mRearValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
+        //printRawValueAsText(mRearValue);
+        updateRawValues(mRearValue);
+        findPeakValues();
+    }
 
-        if( (mFrontValue != null) && (mMiddleValue != null) )
-        {
-            //statement to do determination here
-            if( (mMiddleValue.getValue() > mFrontValue.getValue() && ( mMiddleValue.getValue() > mRearValue.getValue())))
-            {
-                mLastPeakValue = mPeakPPGIVals.get(mPeakPPGIVals.size() - 1);
-                mCurrentPeakValue = mMiddleValue;
-                mPeakPPGIVals.add(mMiddleValue);
-                showHeartbeat();
+    public long calculateTimeInterval()  {
+        long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
+        String msg = "Current peak: " + Long.toString(mCurrentPeakValue.getCurrentTime()) +" Last peak: "
+                + Long.toString(mLastPeakValue.getCurrentTime()) +" Time interval: " +
+                 Long.toString(mTimeInterval)+ "\n";
+        Log.d("Check! ", msg);
+        return mTimeInterval;
+    }
+
+
+
+    public void showMeanValue(int value) {
+        TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
+        tv.setText(Integer.toString(value));
+    }
+
+
+    public void updateRawValues(RawPPGIValue rawValue) {
+        if (mRawPPGIVals.size() == 80) {
+            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1,80));
+            mRawPPGIVals = tmp;
+            mRawPPGIVals.add(rawValue);
+        } else {
+            mRawPPGIVals.add(rawValue);
+        }
+    }
+
+    public void findPeakValues()  {
+        int mCount = mRawPPGIVals.size();
+        int mThreshold = 0;
+        if (mCount >= 11) {
+            RawPPGIValue mCandidate = mRawPPGIVals.get(mCount - 2);
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 5).getValue())
+                mThreshold = mThreshold + 5;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 4).getValue())
+                mThreshold = mThreshold + 4;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 3).getValue())
+                mThreshold = mThreshold + 3;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 2).getValue())
+                mThreshold = mThreshold + 2;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 1).getValue())
+                mThreshold++;
+
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 11).getValue())
+                mThreshold = mThreshold + 1;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 10).getValue())
+                mThreshold = mThreshold + 2;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 7).getValue())
+                mThreshold = mThreshold + 5;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 8).getValue())
+                mThreshold = mThreshold + 4;
+            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 9).getValue())
+                mThreshold+=3;
+            if (mThreshold >= 29) {
+                updatePeakValues(mRawPPGIVals.get(mCount - 6));
             }
         }
-        // Update indicator values
-        mFrontValue = mMiddleValue;
-        mMiddleValue = mRearValue;
     }
 
-    public long calculateTimeInterval(){
-        return mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
+    public void updatePeakValues(RawPPGIValue rawValue)  {
+        int mArraySize = mPeakPPGIVals.size();
+        if (mArraySize > 19) {
+            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mPeakPPGIVals.subList(1, 20));
+            mPeakPPGIVals = tmp;
+            mPeakPPGIVals.add(rawValue);
+            mLastPeakValue = mPeakPPGIVals.get(18);
+            mCurrentPeakValue = mPeakPPGIVals.get(19);
+
+            long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
+            int nArraySize = mPeakPPGIVals.size();
+            compareAndCalculate();
+
+        } else if ( mArraySize > 0) {
+            mLastPeakValue = mPeakPPGIVals.get(mPeakPPGIVals.size() - 1);
+            mCurrentPeakValue = rawValue;
+            mPeakPPGIVals.add(rawValue);
+
+
+            long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
+            int nArraySize = mPeakPPGIVals.size();
+            compareAndCalculate();
+
+        } else {
+            mPeakPPGIVals.add(rawValue);
+            mCurrentPeakValue = rawValue;
+        }
     }
 
-    public void showHeartbeat(){
-         int bpm = Math.round(1/calculateTimeInterval());
-        TextView tv =(TextView) (findViewById(R.id.tv_heartrate));
-        tv.setText(Integer.toString(bpm));
+    public void compareAndCalculate(){
+        if (mCurrentPeakValue.getCurrentTime() > mLastPeakValue.getCurrentTime()) {
+            calculateHeartbeat();
+        }
     }
+
+    public void calculateHeartbeat()  {
+        long mLongCandidateBpm = (1 * 1000 * 60 / calculateTimeInterval());
+        int mCandidateBpm = Math.round(mLongCandidateBpm);
+        String msg = "Candidate heartbeat: " + Long.toString(mLongCandidateBpm)+ " Countdowns: " +
+                Integer.toString(mCountDowns)+ "\n";
+        Log.d("Check", msg);
+        if (mCountDowns < 5)
+        {
+            mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
+            mCountDowns++;
+        } else if (mBpmCandidates.size() == 20) {
+            ArrayList<Integer> tmp = new ArrayList<Integer>(mBpmCandidates.subList(1, 20));
+            mBpmCandidates = tmp;
+            mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
+            if (mCountDowns == 5) {
+                int averageBpm = calculate();
+                mCountDowns = 0;
+                TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
+                tv.setText(Integer.toString(averageBpm));
+
+
+            }
+            mCountDowns++;
+
+        } else {
+            mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
+            if (mCountDowns == 5) {
+                int averageBpm = calculate();
+                mCountDowns = 0;
+                TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
+                tv.setText(Integer.toString(averageBpm));
+
+            }
+            mCountDowns++;
+        }
+    }
+    public int calculate() {
+        int sum = 0;
+        for (int value : mBpmCandidates) {
+            sum += value;
+        }
+        int average = sum / mBpmCandidates.size();
+        return average;
+    }
+
+
+
+    /*public void printRawValueAsText(RawPPGIValue value)  {
+        if (mOutputFilename == null)
+        {
+            String name = new SimpleDateFormat(Configuration.FILENAME_FORMAT, Locale.ENGLISH)
+                    .format(System.currentTimeMillis());
+            mOutputFilename = Environment.getExternalStoragePublicDirectory("ppgi")+"/" + name +".txt";
+        }
+
+        Float numericValue = value.getValue();
+        long timestamp =  value.getCurrentTime();
+        String mOutput = "Time: "+Long.toString(timestamp)+" Value: "  + numericValue.toString() +" \n";
+
+    }*/
 }

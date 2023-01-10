@@ -13,6 +13,11 @@ public class RawPPGIValue implements Parcelable {
         mValue = value;
         mCurrentTime = current.getInstance().getTimeInMillis();
     }
+    public RawPPGIValue(Float value, long currentTime)
+    {
+        this.mValue = value;
+        this.mCurrentTime = currentTime;
+    }
 
     protected RawPPGIValue(Parcel in) {
         if (in.readByte() == 0) {
