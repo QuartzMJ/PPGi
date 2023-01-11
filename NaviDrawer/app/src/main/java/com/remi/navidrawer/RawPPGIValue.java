@@ -3,7 +3,11 @@ package com.remi.navidrawer;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class RawPPGIValue implements Parcelable {
     private Float mValue;
@@ -68,5 +72,17 @@ public class RawPPGIValue implements Parcelable {
     public void writeToParcel(Parcel parcel, int i) {
         parcel.writeFloat(mValue);
         parcel.writeLong(mCurrentTime);
+    }
+
+    public String printRawValue(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSSZ", Locale.GERMAN);
+        GregorianCalendar calendar = new GregorianCalendar(TimeZone.getTimeZone("Europe/Berlin"));
+        calendar.setTimeInMillis(mCurrentTime);
+        String tmp = sdf.format(calendar.getTime());
+        String date = tmp.substring(11,23);
+
+        String msg;
+        msg ="Time: " + date + " Value: " + Float.toString(mValue) + "\n";
+        return msg;
     }
 }

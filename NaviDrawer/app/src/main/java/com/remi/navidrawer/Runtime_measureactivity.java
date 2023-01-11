@@ -32,6 +32,7 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -64,10 +65,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private RawPPGIValue mRearValue;
     private RawPPGIValue mLastPeakValue;
     private RawPPGIValue mCurrentPeakValue;
-    private String mOutputFilename;
     private long mCurrentMiliseconds;
     private ArrayList<Integer> mBpmCandidates;
     private int mCountDowns = 0;
+    private String mOutputFilename ="";
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -120,7 +121,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         javaCameraView = findViewById(R.id.javaCameraView);
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
-        javaCameraView.setMaxFrameSize(960, 720);
+        javaCameraView.setMaxFrameSize(854, 480);
         javaCameraView.setCameraIndex(cameraId);
         javaCameraView.enableFpsMeter();
         javaCameraView.setScreenOrientation(getResources().getConfiguration().orientation);
@@ -170,6 +171,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 }
             }
         });
+        mOutputFilename ="";
     }
 
     @Override
@@ -379,6 +381,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         int startingY = (int) startingPoint.y;
 
 
+
         Rect foreheadROI = new Rect(startingX, startingY, foreheadWidth, foreheadHeight);
         Mat croppedFrame = new Mat(frame, foreheadROI);
         calculateRaw(croppedFrame.clone());
@@ -481,16 +484,14 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mLastPeakValue = mPeakPPGIVals.get(mPeakPPGIVals.size() - 1);
             mCurrentPeakValue = rawValue;
             mPeakPPGIVals.add(rawValue);
-
-
             long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
             int nArraySize = mPeakPPGIVals.size();
             compareAndCalculate();
-
         } else {
             mPeakPPGIVals.add(rawValue);
             mCurrentPeakValue = rawValue;
         }
+        printRawPeakValueAsText(rawValue);
     }
 
     public void compareAndCalculate(){
@@ -518,8 +519,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 mCountDowns = 0;
                 TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
                 tv.setText(Integer.toString(averageBpm));
-
-
             }
             mCountDowns++;
 
@@ -537,26 +536,62 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     }
     public int calculate() {
         int sum = 0;
-        for (int value : mBpmCandidates) {
-            sum += value;
+        int dropCount = 0;
+        int addCount = 0;
+        if (mBpmCandidates.size() <= 10){
+            for (int value : mBpmCandidates) {
+                if (value < 400 && value > 30) {
+                    sum += value;
+                } else {
+                    dropCount++;
+                }
+            }
+
+            float temp = (float) sum /( mBpmCandidates.size() - dropCount);
+            int average = Math.round(temp);
+            return average;
         }
-        int average = sum / mBpmCandidates.size();
+        int arraySize = mBpmCandidates.size();
+        int startIndex = arraySize - 10;
+        for (int i = startIndex; i < arraySize; i++) {
+            if (mBpmCandidates.get(i) < 350 && mBpmCandidates.get(i) > 25) {
+                sum += mBpmCandidates.get(i);
+            } else {
+                dropCount++;
+            }
+        }
+        float temp = (float) sum /( 10 - dropCount);
+        int average = Math.round(temp);
         return average;
     }
 
-
-
-    /*public void printRawValueAsText(RawPPGIValue value)  {
-        if (mOutputFilename == null)
+    public void printRawPeakValueAsText(RawPPGIValue value)  {
+        if (mOutputFilename == "")
         {
             String name = new SimpleDateFormat(Configuration.FILENAME_FORMAT, Locale.ENGLISH)
                     .format(System.currentTimeMillis());
-            mOutputFilename = Environment.getExternalStoragePublicDirectory("ppgi")+"/" + name +".txt";
+            mOutputFilename = getExternalFilesDir("ppgi")+"/" + name +".txt";
         }
+        String outputValue = value.printRawValue();
+        Log.d("Test Output1", "Magic works");
+        appendWrite(mOutputFilename, outputValue);
+    }
 
-        Float numericValue = value.getValue();
-        long timestamp =  value.getCurrentTime();
-        String mOutput = "Time: "+Long.toString(timestamp)+" Value: "  + numericValue.toString() +" \n";
-
-    }*/
+    public static void appendWrite(String file, String conent) {
+        BufferedWriter out = null;
+        try {
+            out = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(file, true)));
+            out.write(conent);
+            Log.d("Test Output2", "Magic works"+ file);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
