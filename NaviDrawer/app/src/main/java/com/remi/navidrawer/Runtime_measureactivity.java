@@ -50,7 +50,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private JavaCameraView javaCameraView;
     private int cameraId = 0;
     private CascadeClassifier mFaceDetector, mNoseDetector;
-    private Mat mGray;
     private File mCascadeFile;
     private static final String TAG = "OCVSample::Activity";
     private float mRelativeFaceSize = 0.2f;
@@ -72,6 +71,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private int mDropFrames = 0;
     private long mLastDropTime = 0;
     private long mRecoverTime = 0;
+    private Float averageRaw = 0f;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -201,7 +201,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
         mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
-        mNoseDetector = loadDetector(R.raw.haarcascade_mcs_nose, "haarcascade_mcs_nose.xml");
     }
 
     private CascadeClassifier loadDetector(int rawID, String fileName) {
@@ -240,6 +239,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         }
         return classifier;
     }
+
     private boolean allPermissionsGranted() {
         for (String permission : Configuration.REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission)
@@ -309,63 +309,39 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             frame = inputFrame.rgba();
         }
 
-
-        // convert frame into gray scale for later detection
-        Mat mGray = new Mat();
-        Imgproc.cvtColor(frame, mGray, Imgproc.COLOR_BGR2GRAY);
-
         //  absolute face size initialization
         if (mAbsoluteFaceSize == 0) {    // only called at the beginning of the activity
-            int height = mGray.rows();
+            int height = frame.rows();
             if (Math.round(height * mRelativeFaceSize) > 0) {
                 mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
             }
         }
-
         // container for multiple detected faces, in our case only one for heart rate measurement
         // convert into array for indexing
         MatOfRect faces = new MatOfRect();
         if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+            mFaceDetector.detectMultiScale(frame, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }
         Rect[] facesArray = faces.toArray();
-
-
         if (facesArray.length > 0) {
             for (int i = 0; i < facesArray.length; i++) {
 
-                Mat faceROI = mGray.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
+                Mat faceROI = frame.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
 
                 if (getBoundingState() == 1) {
                     Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
                 }
+                Log.d("ROI:", "Starting Point: " + facesArray[i].tl().toString() + " \n" + "Ending Point: " + facesArray[i].br().toString() + " \n");
 
-                MatOfRect noses = new MatOfRect();
-                mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
-                        new Size(30, 30));
-
-                Rect[] nosesArray = noses.toArray();       // take out the value from the array one by one, in this case only one iteration
-                if (nosesArray.length > 0) {
-                    if (getBoundingState() == 1) {
-                        Imgproc.rectangle(frame,
-                                new Point(facesArray[i].tl().x + nosesArray[0].tl().x, facesArray[i].tl().y + nosesArray[0].tl().y),
-                                new Point(facesArray[i].tl().x + nosesArray[0].br().x, facesArray[i].tl().y + nosesArray[0].br().y),
-                                FACE_RECT_COLOR, 3);
-                    }
-                    Mat noseROI = mGray.submat(nosesArray[0]);
-
-                    Log.d("ROI:", "Starting Point: " + facesArray[i].tl().toString() + " \n" +"Ending Point: " + facesArray[i].br().toString() + " \n" );
-
-                    if(mDropFrames > 0) {
-                        mRecoverTime = mCurrentMiliseconds;
-                    }
-                    mDropFrames = 0;
-                    startMeasure(faceROI, frame, facesArray[i].tl() );
+                if (mDropFrames > 0) {
+                    mRecoverTime = mCurrentMiliseconds;
                 }
+                mDropFrames = 0;
+                startMeasure(faceROI, frame, facesArray[i].tl());
             }
         }
-        if (mDropFrames == 0){
-        mLastDropTime = mCurrentMiliseconds;
+        if (mDropFrames == 0) {
+            mLastDropTime = mCurrentMiliseconds;
         }
         mDropFrames = mDropFrames + 1;
         return frame;
@@ -373,17 +349,16 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
     public void startMeasure(Mat face, Mat frame, Point startingPoint) {
 
-        int foreheadHeight = face.rows() /5;
+        int foreheadHeight = face.rows() / 6;
         int foreheadWidth = 3 * face.cols() / 5;
 
-        int startingX = (int) startingPoint.x + (int) face.cols()/5;
-        int startingY = (int) startingPoint.y + (int) face.rows()/7;
-
-
+        int startingX = (int) startingPoint.x + (int) face.cols() / 5;
+        int startingY = (int) startingPoint.y + face.rows()/12 ;
 
         Rect foreheadROI = new Rect(startingX, startingY, foreheadWidth, foreheadHeight);
+        Imgproc.rectangle(frame, foreheadROI.tl(), foreheadROI.br(), FACE_RECT_COLOR, 3);
         Mat croppedFrame = new Mat(frame, foreheadROI);
-        calculateRaw(croppedFrame.clone());
+        calculateRaw(croppedFrame);
     }
 
     public void calculateRaw(Mat forehead) {
@@ -396,6 +371,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         Core.meanStdDev(mGreenChannel, mMeanValue, mStdDev);
         Double mean = mMeanValue.toList().get(0);
         Float tmp = mean.floatValue();
+        Log.d("RawPPGI: ", Float.toString(tmp));
         addAndDetermine(tmp);
         // calculate Raw values here
     }
@@ -427,10 +403,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     }
 
     public void findPeakValues() {
+        if (mRawPPGIVals.size() < 40) {
+            return;
+        }
         int mCount = mRawPPGIVals.size();
         int mThreshold = 0;
         if (mCount >= 11) {
-            RawPPGIValue mCandidate = mRawPPGIVals.get(mCount - 2);
             if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 5).getValue())
                 mThreshold = mThreshold + 5;
             if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 4).getValue())
@@ -452,7 +430,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 mThreshold = mThreshold + 4;
             if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 9).getValue())
                 mThreshold += 3;
-            if (mThreshold >= 28) {
+            if (mThreshold >= 29) {
                 updatePeakValues(mRawPPGIVals.get(mCount - 6));
             }
         }
@@ -560,7 +538,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         if (mOutputFilename == "") {
             String name = new SimpleDateFormat(Configuration.FILENAME_FORMAT, Locale.ENGLISH)
                     .format(System.currentTimeMillis());
-            mOutputFilename = getExternalFilesDir("ppgi") + "/" + name + ".txt";
+            mOutputFilename = getExternalFilesDir("Peak") + "/" + name + ".txt";
         }
         String outputValue = value.printRawValue();
         Log.d("Test Output1", "Magic works");
