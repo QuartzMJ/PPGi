@@ -59,8 +59,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     private ArrayList<RawPPGIValue> mRawPPGIVals;
     private ArrayList<RawPPGIValue> mPeakPPGIVals;
-    private RawPPGIValue mFrontValue;
-    private RawPPGIValue mMiddleValue;
     private RawPPGIValue mRearValue;
     private RawPPGIValue mLastPeakValue;
     private RawPPGIValue mCurrentPeakValue;
@@ -72,6 +70,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private long mLastDropTime = 0;
     private long mRecoverTime = 0;
     private Float averageRaw = 0f;
+    private Float mLastRawValue = 0f;
+    private TimeWindowContainer mContainer;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -109,14 +109,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         if (savedInstanceState == null) {
             mRawPPGIVals = new ArrayList<RawPPGIValue>();
             mPeakPPGIVals = new ArrayList<RawPPGIValue>();
-            mFrontValue = null;
             mRearValue = null;
-            mMiddleValue = null;
         } else {
             mRawPPGIVals = savedInstanceState.getParcelableArrayList("RawValue List");
             mPeakPPGIVals = savedInstanceState.getParcelableArrayList("PeakValue List");
-            mFrontValue = savedInstanceState.getParcelable("Front");
-            mMiddleValue = savedInstanceState.getParcelable("Middle");
             mRearValue = savedInstanceState.getParcelable("Rear");
         }
 
@@ -201,6 +197,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
         mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
+        mContainer = new TimeWindowContainer();
     }
 
     private CascadeClassifier loadDetector(int rawID, String fileName) {
@@ -285,8 +282,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelableArrayList("RawValue List", mRawPPGIVals);
         savedInstanceState.putParcelableArrayList("PeakValue List", mPeakPPGIVals);
-        savedInstanceState.putParcelable("Front", mFrontValue);
-        savedInstanceState.putParcelable("Middle", mMiddleValue);
         savedInstanceState.putParcelable("Rear", mRearValue);
     }
 
@@ -324,26 +319,28 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         }
         Rect[] facesArray = faces.toArray();
         if (facesArray.length > 0) {
+            if (mDropFrames > 0) {
+                mRecoverTime = mCurrentMiliseconds;
+                mContainer.add(mRecoverTime);
+                mDropFrames = 0;
+            }
             for (int i = 0; i < facesArray.length; i++) {
 
                 Mat faceROI = frame.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
-
                 if (getBoundingState() == 1) {
                     Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
                 }
-                Log.d("ROI:", "Starting Point: " + facesArray[i].tl().toString() + " \n" + "Ending Point: " + facesArray[i].br().toString() + " \n");
-
-                if (mDropFrames > 0) {
-                    mRecoverTime = mCurrentMiliseconds;
-                }
-                mDropFrames = 0;
                 startMeasure(faceROI, frame, facesArray[i].tl());
             }
+        } else {
+            if (mDropFrames == 0) {
+                mLastDropTime = mCurrentMiliseconds;
+                mContainer.add(mLastDropTime);
+            }
+            mDropFrames += 1;
+            // Placeholder for non faces images
+            updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds));
         }
-        if (mDropFrames == 0) {
-            mLastDropTime = mCurrentMiliseconds;
-        }
-        mDropFrames = mDropFrames + 1;
         return frame;
     }
 
@@ -353,7 +350,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         int foreheadWidth = 3 * face.cols() / 5;
 
         int startingX = (int) startingPoint.x + (int) face.cols() / 5;
-        int startingY = (int) startingPoint.y + face.rows()/12 ;
+        int startingY = (int) startingPoint.y + face.rows() / 12;
 
         Rect foreheadROI = new Rect(startingX, startingY, foreheadWidth, foreheadHeight);
         Imgproc.rectangle(frame, foreheadROI.tl(), foreheadROI.br(), FACE_RECT_COLOR, 3);
@@ -400,39 +397,26 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         } else {
             mRawPPGIVals.add(rawValue);
         }
+        mLastRawValue = rawValue.getValue();
+        printRawPeakValueAsText(rawValue);
     }
 
     public void findPeakValues() {
-        if (mRawPPGIVals.size() < 40) {
+        int mCount = mRawPPGIVals.size();
+
+        if (mCount <= 20) {
             return;
         }
-        int mCount = mRawPPGIVals.size();
-        int mThreshold = 0;
-        if (mCount >= 11) {
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 5).getValue())
-                mThreshold = mThreshold + 5;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 4).getValue())
-                mThreshold = mThreshold + 4;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 3).getValue())
-                mThreshold = mThreshold + 3;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 2).getValue())
-                mThreshold = mThreshold + 2;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 1).getValue())
-                mThreshold++;
 
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 11).getValue())
-                mThreshold = mThreshold + 1;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 10).getValue())
-                mThreshold = mThreshold + 2;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 7).getValue())
-                mThreshold = mThreshold + 5;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 8).getValue())
-                mThreshold = mThreshold + 4;
-            if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 9).getValue())
-                mThreshold += 3;
-            if (mThreshold >= 29) {
-                updatePeakValues(mRawPPGIVals.get(mCount - 6));
+        if (mCount > 20) {
+            RawPPGIValue mCandidate = mRawPPGIVals.get(mCount - 11);
+
+            for (int index = 1; index < 8; index++) {
+                if (mCandidate.getValue() < mRawPPGIVals.get(mCount - 11 - index).getValue() || mCandidate.getValue() < mRawPPGIVals.get(mCount - 11 + index).getValue()) {
+                    return;
+                }
             }
+            updatePeakValues(mCandidate);
         }
     }
 
@@ -460,7 +444,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mPeakPPGIVals.add(rawValue);
             mCurrentPeakValue = rawValue;
         }
-        printRawPeakValueAsText(rawValue);
     }
 
     public void compareAndCalculate() {
