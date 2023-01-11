@@ -68,7 +68,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private long mCurrentMiliseconds;
     private ArrayList<Integer> mBpmCandidates;
     private int mCountDowns = 0;
-    private String mOutputFilename ="";
+    private String mOutputFilename = "";
+    private int mDropFrames = 0;
+    private long mLastDropTime = 0;
+    private long mRecoverTime = 0;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -92,7 +95,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         list.add(javaCameraView);
         return list;
     }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,102 +173,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 }
             }
         });
-        mOutputFilename ="";
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (!OpenCVLoader.initDebug()) {
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mBaseLoaderCallback);
-        } else {
-            mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-        }
-        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
-        mNoseDetector = loadDetector(R.raw.haarcascade_mcs_nose, "haarcascade_mcs_nose.xml");
-    }
-
-    @Override
-    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        Mat frame = new Mat();
-        // in case of portrait, set the frame into correct rotation
-        if (getResources().getConfiguration().orientation == 1) {
-            Mat reversedFrame = inputFrame.rgba();
-            if (cameraId == 0) {
-                Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 270, 1);
-                Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
-            } else {
-                Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 90, 1);
-                Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
-            }
-        } else {
-            frame = inputFrame.rgba();
-        }
-
-        // convert frame into gray scale for later detection
-        Mat mGray = new Mat();
-        Imgproc.cvtColor(frame, mGray, Imgproc.COLOR_BGR2GRAY);
-
-        //  absolute face size initialization
-        if (mAbsoluteFaceSize == 0) {    // only called at the beginning of the activity
-            int height = mGray.rows();
-            if (Math.round(height * mRelativeFaceSize) > 0) {
-                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
-            }
-        }
-
-        // container for multiple detected faces, in our case only one for heart rate measurement
-        MatOfRect faces = new MatOfRect();
-        if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
-        }
-
-        // convert into array for indexing
-        Rect[] facesArray = faces.toArray();
-        if (getBoundingState() == 1 && facesArray.length > 0) {
-            for (int i = 0; i < facesArray.length; i++) {
-
-                Mat faceROI = mGray.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
-                MatOfRect noses = new MatOfRect();
-                mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
-                        new Size(30, 30));
-
-                Rect[] nosesArray = noses.toArray();       // take out the value from the array one by one, in this case only one iteration
-                try {
-
-                    if (nosesArray != null) {
-                        Imgproc.rectangle(frame,
-                                new Point(facesArray[i].tl().x + nosesArray[0].tl().x, facesArray[i].tl().y + nosesArray[0].tl().y),
-                                new Point(facesArray[i].tl().x + nosesArray[0].br().x, facesArray[i].tl().y + nosesArray[0].br().y),
-                                FACE_RECT_COLOR, 3);
-
-                        Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
-
-                        if (getPlotState() == 1) {        //  start measurement only in need
-                            Mat noseROI = mGray.submat(nosesArray[0]);
-                            Point tmp = facesArray[i].tl();
-                            mCurrentMiliseconds = Calendar.getInstance().getTimeInMillis();
-                            startMeasure(faceROI, frame, tmp);
-                        }
-                    }
-                } catch (Exception e) {
-
-                    e.printStackTrace();
-                    return frame;
-                }
-            }
-
-        } else {
-            for (int i = 0; i < facesArray.length; i++) {
-                Mat faceROI = mGray.submat(facesArray[i]);
-                MatOfRect noses = new MatOfRect();
-                mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
-                        new Size(30, 30));
-            }
-        }
-        return frame;
-
-
+        mOutputFilename = "";
     }
 
     @Override
@@ -283,6 +190,18 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
     @Override
     public void onCameraViewStopped() {
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mBaseLoaderCallback);
+        } else {
+            mBaseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
+        mNoseDetector = loadDetector(R.raw.haarcascade_mcs_nose, "haarcascade_mcs_nose.xml");
     }
 
     private CascadeClassifier loadDetector(int rawID, String fileName) {
@@ -321,7 +240,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         }
         return classifier;
     }
-
     private boolean allPermissionsGranted() {
         for (String permission : Configuration.REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission)
@@ -372,13 +290,94 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         savedInstanceState.putParcelable("Rear", mRearValue);
     }
 
-    public void startMeasure(Mat face, Mat frame, Point startingPoint) throws Exception {
+    @Override
+    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+        Mat frame = new Mat();
+        mCurrentMiliseconds = Calendar.getInstance().getTimeInMillis();
+        // in case of portrait, set the frame into correct rotation
+        // but it uses landscape orientation as default, nothing to modify here
+        if (getResources().getConfiguration().orientation == 1) {
+            Mat reversedFrame = inputFrame.rgba();
+            if (cameraId == 0) {
+                Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 270, 1);
+                Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
+            } else {
+                Mat rotateMat = Imgproc.getRotationMatrix2D(new Point(reversedFrame.rows() / 2, reversedFrame.cols() / 2), 90, 1);
+                Imgproc.warpAffine(reversedFrame, frame, rotateMat, frame.size());
+            }
+        } else {
+            frame = inputFrame.rgba();
+        }
 
-        int foreheadHeight = face.rows() / 3;
-        int foreheadWidth = face.cols();
 
-        int startingX = (int) startingPoint.x;
-        int startingY = (int) startingPoint.y;
+        // convert frame into gray scale for later detection
+        Mat mGray = new Mat();
+        Imgproc.cvtColor(frame, mGray, Imgproc.COLOR_BGR2GRAY);
+
+        //  absolute face size initialization
+        if (mAbsoluteFaceSize == 0) {    // only called at the beginning of the activity
+            int height = mGray.rows();
+            if (Math.round(height * mRelativeFaceSize) > 0) {
+                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+            }
+        }
+
+        // container for multiple detected faces, in our case only one for heart rate measurement
+        // convert into array for indexing
+        MatOfRect faces = new MatOfRect();
+        if (mFaceDetector != null) {
+            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+        }
+        Rect[] facesArray = faces.toArray();
+
+
+        if (facesArray.length > 0) {
+            for (int i = 0; i < facesArray.length; i++) {
+
+                Mat faceROI = mGray.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
+
+                if (getBoundingState() == 1) {
+                    Imgproc.rectangle(frame, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+                }
+
+                MatOfRect noses = new MatOfRect();
+                mNoseDetector.detectMultiScale(faceROI, noses, 1.1, 2, 2,
+                        new Size(30, 30));
+
+                Rect[] nosesArray = noses.toArray();       // take out the value from the array one by one, in this case only one iteration
+                if (nosesArray.length > 0) {
+                    if (getBoundingState() == 1) {
+                        Imgproc.rectangle(frame,
+                                new Point(facesArray[i].tl().x + nosesArray[0].tl().x, facesArray[i].tl().y + nosesArray[0].tl().y),
+                                new Point(facesArray[i].tl().x + nosesArray[0].br().x, facesArray[i].tl().y + nosesArray[0].br().y),
+                                FACE_RECT_COLOR, 3);
+                    }
+                    Mat noseROI = mGray.submat(nosesArray[0]);
+
+                    Log.d("ROI:", "Starting Point: " + facesArray[i].tl().toString() + " \n" +"Ending Point: " + facesArray[i].br().toString() + " \n" );
+
+                    if(mDropFrames > 0) {
+                        mRecoverTime = mCurrentMiliseconds;
+                    }
+                    mDropFrames = 0;
+                    startMeasure(faceROI, frame, facesArray[i].tl() );
+                }
+            }
+        }
+        if (mDropFrames == 0){
+        mLastDropTime = mCurrentMiliseconds;
+        }
+        mDropFrames = mDropFrames + 1;
+        return frame;
+    }
+
+    public void startMeasure(Mat face, Mat frame, Point startingPoint) {
+
+        int foreheadHeight = face.rows() /5;
+        int foreheadWidth = 3 * face.cols() / 5;
+
+        int startingX = (int) startingPoint.x + (int) face.cols()/5;
+        int startingY = (int) startingPoint.y + (int) face.rows()/7;
 
 
 
@@ -387,7 +386,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         calculateRaw(croppedFrame.clone());
     }
 
-    public void calculateRaw(Mat forehead)  {
+    public void calculateRaw(Mat forehead) {
         List<Mat> channels = new ArrayList<Mat>();
         Core.split(forehead, channels);
         Mat mGreenChannel = channels.get(1);
@@ -401,33 +400,25 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         // calculate Raw values here
     }
 
-    public void addAndDetermine(Float rawValue)  {
+    public void addAndDetermine(Float rawValue) {
         mRearValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
         //printRawValueAsText(mRearValue);
         updateRawValues(mRearValue);
         findPeakValues();
     }
 
-    public long calculateTimeInterval()  {
+    public long calculateTimeInterval() {
         long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
-        String msg = "Current peak: " + Long.toString(mCurrentPeakValue.getCurrentTime()) +" Last peak: "
-                + Long.toString(mLastPeakValue.getCurrentTime()) +" Time interval: " +
-                 Long.toString(mTimeInterval)+ "\n";
+        String msg = "Current peak: " + Long.toString(mCurrentPeakValue.getCurrentTime()) + " Last peak: "
+                + Long.toString(mLastPeakValue.getCurrentTime()) + " Time interval: " +
+                Long.toString(mTimeInterval) + "\n";
         Log.d("Check! ", msg);
         return mTimeInterval;
     }
 
-
-
-    public void showMeanValue(int value) {
-        TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
-        tv.setText(Integer.toString(value));
-    }
-
-
     public void updateRawValues(RawPPGIValue rawValue) {
         if (mRawPPGIVals.size() == 80) {
-            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1,80));
+            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1, 80));
             mRawPPGIVals = tmp;
             mRawPPGIVals.add(rawValue);
         } else {
@@ -435,7 +426,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         }
     }
 
-    public void findPeakValues()  {
+    public void findPeakValues() {
         int mCount = mRawPPGIVals.size();
         int mThreshold = 0;
         if (mCount >= 11) {
@@ -460,14 +451,14 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 8).getValue())
                 mThreshold = mThreshold + 4;
             if (mRawPPGIVals.get(mCount - 6).getValue() > mRawPPGIVals.get(mCount - 9).getValue())
-                mThreshold+=3;
-            if (mThreshold >= 29) {
+                mThreshold += 3;
+            if (mThreshold >= 28) {
                 updatePeakValues(mRawPPGIVals.get(mCount - 6));
             }
         }
     }
 
-    public void updatePeakValues(RawPPGIValue rawValue)  {
+    public void updatePeakValues(RawPPGIValue rawValue) {
         int mArraySize = mPeakPPGIVals.size();
         if (mArraySize > 19) {
             ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mPeakPPGIVals.subList(1, 20));
@@ -480,7 +471,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             int nArraySize = mPeakPPGIVals.size();
             compareAndCalculate();
 
-        } else if ( mArraySize > 0) {
+        } else if (mArraySize > 0) {
             mLastPeakValue = mPeakPPGIVals.get(mPeakPPGIVals.size() - 1);
             mCurrentPeakValue = rawValue;
             mPeakPPGIVals.add(rawValue);
@@ -494,20 +485,19 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         printRawPeakValueAsText(rawValue);
     }
 
-    public void compareAndCalculate(){
+    public void compareAndCalculate() {
         if (mCurrentPeakValue.getCurrentTime() > mLastPeakValue.getCurrentTime()) {
             calculateHeartbeat();
         }
     }
 
-    public void calculateHeartbeat()  {
+    public void calculateHeartbeat() {
         long mLongCandidateBpm = (1 * 1000 * 60 / calculateTimeInterval());
         int mCandidateBpm = Math.round(mLongCandidateBpm);
-        String msg = "Candidate heartbeat: " + Long.toString(mLongCandidateBpm)+ " Countdowns: " +
-                Integer.toString(mCountDowns)+ "\n";
+        String msg = "Candidate heartbeat: " + Long.toString(mLongCandidateBpm) + " Countdowns: " +
+                Integer.toString(mCountDowns) + "\n";
         Log.d("Check", msg);
-        if (mCountDowns < 5)
-        {
+        if (mCountDowns < 5) {
             mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
             mCountDowns++;
         } else if (mBpmCandidates.size() == 20) {
@@ -534,11 +524,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mCountDowns++;
         }
     }
+
     public int calculate() {
         int sum = 0;
         int dropCount = 0;
         int addCount = 0;
-        if (mBpmCandidates.size() <= 10){
+        if (mBpmCandidates.size() <= 10) {
             for (int value : mBpmCandidates) {
                 if (value < 400 && value > 30) {
                     sum += value;
@@ -547,7 +538,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 }
             }
 
-            float temp = (float) sum /( mBpmCandidates.size() - dropCount);
+            float temp = (float) sum / (mBpmCandidates.size() - dropCount);
             int average = Math.round(temp);
             return average;
         }
@@ -560,17 +551,16 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 dropCount++;
             }
         }
-        float temp = (float) sum /( 10 - dropCount);
+        float temp = (float) sum / (10 - dropCount);
         int average = Math.round(temp);
         return average;
     }
 
-    public void printRawPeakValueAsText(RawPPGIValue value)  {
-        if (mOutputFilename == "")
-        {
+    public void printRawPeakValueAsText(RawPPGIValue value) {
+        if (mOutputFilename == "") {
             String name = new SimpleDateFormat(Configuration.FILENAME_FORMAT, Locale.ENGLISH)
                     .format(System.currentTimeMillis());
-            mOutputFilename = getExternalFilesDir("ppgi")+"/" + name +".txt";
+            mOutputFilename = getExternalFilesDir("ppgi") + "/" + name + ".txt";
         }
         String outputValue = value.printRawValue();
         Log.d("Test Output1", "Magic works");
@@ -583,7 +573,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             out = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(file, true)));
             out.write(conent);
-            Log.d("Test Output2", "Magic works"+ file);
+            Log.d("Test Output2", "Magic works" + file);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
