@@ -30,17 +30,7 @@
         android:textColor="#E24343"
         android:gravity="center"/>
 
-    <ImageButton
-        android:id="@+id/switchCameraButton2"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:elevation="2dp"
-        android:background="@null"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginEnd="45dp"
-        android:layout_marginBottom="45dp"
-         />
+
 
     <ImageButton
         android:id="@+id/boundingBoxSwitcher"
@@ -50,9 +40,9 @@
         android:background="@null"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="45dp"
-        android:layout_marginBottom="45dp"
-        android:src="@drawable/ic_boundingbox_off_foreground"/>
+        android:layout_marginStart="15dp"
+        android:layout_marginBottom="15dp"
+       />
 
     <ImageButton
         android:id="@+id/plotRuntimeHeartRate"
@@ -63,7 +53,18 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="45dp"
-        android:src="@drawable/ic_plot_foreground"/>
+        android:layout_marginBottom="15dp"
+        />
 
+    <ImageButton
+        android:id="@+id/switchCameraButton2"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:elevation="2dp"
+        android:background="@null"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="15dp"
+        android:layout_marginBottom="15dp"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -99,7 +99,11 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_measureactivity);
+        if (getResources().getConfiguration().orientation == 1) {
+            setContentView(R.layout.activity_measureactivity);
+        } else {
+            setContentView(R.layout.activity_measure_landscape);
+        }
         if (allPermissionsGranted()) {
             Log.d("Test", "Magic works");
         } else {
@@ -124,46 +128,56 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         javaCameraView.enableFpsMeter();
 
         ImageButton switchCameraBtn = findViewById(R.id.switchCameraButton2);
-        switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
-
-        findViewById(R.id.switchCameraButton2).setOnClickListener(new View.OnClickListener() {
+        switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front_foreground);
+        switchCameraBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 cameraId = cameraId ^ 1;
                 javaCameraView.disableView();
                 javaCameraView.setCameraIndex(cameraId);
                 if (cameraId == 0)
-                    switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front);
+                    switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_front_foreground);
                 else
-                    switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_back);
+                    switchCameraBtn.setBackgroundResource(R.drawable.ic_switch_back_foreground);
                 javaCameraView.enableView();
             }
         });
 
         setBoundingState(1);
-        findViewById(R.id.boundingBoxSwitcher).setOnClickListener(new View.OnClickListener() {
+        ImageButton boundingBoxSwitcher =  findViewById(R.id.boundingBoxSwitcher);
+        boundingBoxSwitcher.setBackgroundResource(R.drawable.ic_boundingbox_off_foreground);
+        boundingBoxSwitcher.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (getBoundingState() == 1)
+                if (getBoundingState() == 1){
                     setBoundingState(0);
-                else
+                    boundingBoxSwitcher.setBackgroundResource(R.drawable.ic_boundingbox_on_foreground);
+                }
+                else{
                     setBoundingState(1);
+                    boundingBoxSwitcher.setBackgroundResource(R.drawable.ic_boundingbox_off_foreground);
+                }
             }
         });
 
         mBpmCandidates = new ArrayList<Integer>();
         // 0 for no plots, 1 for plots
         setPlotState(1);
-        findViewById(R.id.tv_heartrate).setVisibility(View.VISIBLE);
-        findViewById(R.id.plotRuntimeHeartRate).setOnClickListener(new View.OnClickListener() {
+        TextView plotText = findViewById(R.id.tv_heartrate);
+        plotText.setVisibility(View.VISIBLE);
+        ImageButton plotSwitcher = findViewById(R.id.plotRuntimeHeartRate);
+        plotSwitcher.setBackgroundResource(R.drawable.ic_plot_foreground);
+        plotSwitcher.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (getPlotState() == 1) {
                     setPlotState(0);
-                    findViewById(R.id.tv_heartrate).setVisibility(View.INVISIBLE);
+                    plotText.setVisibility(View.INVISIBLE);
+                    plotSwitcher.setBackgroundResource(R.drawable.ic_plot_off_foreground);
                 } else {
                     setPlotState(1);
-                    findViewById(R.id.tv_heartrate).setVisibility(View.VISIBLE);
+                    plotText.setVisibility(View.VISIBLE);
+                    plotSwitcher.setBackgroundResource(R.drawable.ic_plot_foreground);
                 }
             }
         });
@@ -348,17 +362,17 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             if (cameraId == 0) {      // in case of back camera
                 Mat rotatedMat = Imgproc.getRotationMatrix2D(new Point(frame.cols() / 2, frame.rows() / 2), 270, 1);
 
-                Rect bbox = new RotatedRect(new Point(frame.cols() / 2, frame.rows() / 2),frame.size(), 270).boundingRect();
-                rotatedMat.put(0, 2, rotatedMat.get(0,2)[0] + bbox.width/2.0 - frame.cols() / 2);
-                rotatedMat.put(1, 2, rotatedMat.get(1,2)[0] + bbox.height/2.0 - frame.rows() / 2);
+                Rect bbox = new RotatedRect(new Point(frame.cols() / 2, frame.rows() / 2), frame.size(), 270).boundingRect();
+                rotatedMat.put(0, 2, rotatedMat.get(0, 2)[0] + bbox.width / 2.0 - frame.cols() / 2);
+                rotatedMat.put(1, 2, rotatedMat.get(1, 2)[0] + bbox.height / 2.0 - frame.rows() / 2);
 
                 Imgproc.warpAffine(frame, rotatedFrame, rotatedMat, new Size(new Point(frame.rows(), frame.cols())));
             } else {
                 Mat rotatedMat = Imgproc.getRotationMatrix2D(new Point(frame.cols() / 2, frame.rows() / 2), 90, 1);
 
-                Rect bbox = new RotatedRect(new Point(frame.cols() / 2, frame.rows() / 2),frame.size(), 90).boundingRect();
-                rotatedMat.put(0, 2, rotatedMat.get(0,2)[0] + bbox.width/2.0 - frame.cols() / 2);
-                rotatedMat.put(1, 2, rotatedMat.get(1,2)[0] + bbox.height/2.0 - frame.rows() / 2);
+                Rect bbox = new RotatedRect(new Point(frame.cols() / 2, frame.rows() / 2), frame.size(), 90).boundingRect();
+                rotatedMat.put(0, 2, rotatedMat.get(0, 2)[0] + bbox.width / 2.0 - frame.cols() / 2);
+                rotatedMat.put(1, 2, rotatedMat.get(1, 2)[0] + bbox.height / 2.0 - frame.rows() / 2);
 
                 Imgproc.warpAffine(frame, rotatedFrame, rotatedMat, new Size(new Point(frame.rows(), frame.cols())));
             }
@@ -397,17 +411,17 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             if (cameraId == 0) {
                 Mat rotatedMat = Imgproc.getRotationMatrix2D(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2), 90, 1);
 
-                Rect bbox = new RotatedRect(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2),rotatedFrame.size(), 90).boundingRect();
-                rotatedMat.put(0, 2, rotatedMat.get(0,2)[0] + bbox.width/2.0 - rotatedFrame.cols() / 2);
-                rotatedMat.put(1, 2, rotatedMat.get(1,2)[0] + bbox.height/2.0 - rotatedFrame.rows() / 2);
+                Rect bbox = new RotatedRect(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2), rotatedFrame.size(), 90).boundingRect();
+                rotatedMat.put(0, 2, rotatedMat.get(0, 2)[0] + bbox.width / 2.0 - rotatedFrame.cols() / 2);
+                rotatedMat.put(1, 2, rotatedMat.get(1, 2)[0] + bbox.height / 2.0 - rotatedFrame.rows() / 2);
 
                 Imgproc.warpAffine(rotatedFrame, returnFrame, rotatedMat, frame.size());
             } else {
                 Mat rotatedMat = Imgproc.getRotationMatrix2D(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2), 270, 1);
 
-                Rect bbox = new RotatedRect(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2),rotatedFrame.size(), 270).boundingRect();
-                rotatedMat.put(0, 2, rotatedMat.get(0,2)[0] + bbox.width/2.0 - rotatedFrame.cols() / 2);
-                rotatedMat.put(1, 2, rotatedMat.get(1,2)[0] + bbox.height/2.0 - rotatedFrame.rows() / 2);
+                Rect bbox = new RotatedRect(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2), rotatedFrame.size(), 270).boundingRect();
+                rotatedMat.put(0, 2, rotatedMat.get(0, 2)[0] + bbox.width / 2.0 - rotatedFrame.cols() / 2);
+                rotatedMat.put(1, 2, rotatedMat.get(1, 2)[0] + bbox.height / 2.0 - rotatedFrame.rows() / 2);
 
                 Imgproc.warpAffine(rotatedFrame, returnFrame, rotatedMat, frame.size());
             }
