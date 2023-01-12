@@ -49,7 +49,7 @@ import java.util.Locale;
 public class Runtime_measureactivity extends CameraActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private JavaCameraView javaCameraView;
-    private int cameraId = 0; // 0 for back camera, 1 for front camera
+    private int cameraId = 1; // 0 for back camera, 1 for front camera
     private CascadeClassifier mFaceDetector, mNoseDetector;
     private File mCascadeFile;
     private static final String TAG = "OCVSample::Activity";
@@ -64,7 +64,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private RawPPGIValue mLastPeakValue;
     private RawPPGIValue mCurrentPeakValue;
     private long mCurrentMiliseconds;
-    private ArrayList<Integer> mBpmCandidates;
+    private ArrayList<Integer> mBpmCandidates = new ArrayList<Integer>();
     private int mCountDowns = 0;
     private String mOutputFilename = "";
     private int mDropFrames = 0;
@@ -160,7 +160,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
         });
 
-        mBpmCandidates = new ArrayList<Integer>();
+
         // 0 for no plots, 1 for plots
         setPlotState(1);
         TextView plotText = findViewById(R.id.tv_heartrate);
@@ -181,7 +181,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 }
             }
         });
-        mOutputFilename = "";
+
     }
 
     @Override
@@ -240,10 +240,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 classifier = null;
             } else
                 Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
-
             cascadeDir.delete();
-
-
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
@@ -262,7 +259,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     }
 
     static class Configuration {
-        public static final String TAG = "CameraxBasic";
         public static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
         public static final int REQUEST_CODE_PERMISSIONS = 50;
         public static final int REQUEST_AUDIO_CODE_PERMISSIONS = 12;
@@ -346,7 +342,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
             return frame;
         } else {    // in the mode of potrait, where the image is in the wrong direction
-
             frame = inputFrame.rgba();
             //  absolute face size initialization
             if (mAbsoluteFaceSize == 0) {    // only called at the beginning of the activity
