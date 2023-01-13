@@ -14,6 +14,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
@@ -61,8 +62,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private ArrayList<RawPPGIValue> mRawPPGIVals;
     private ArrayList<RawPPGIValue> mPeakPPGIVals;
     private RawPPGIValue mRearValue;
-    private RawPPGIValue mLastPeakValue;
-    private RawPPGIValue mCurrentPeakValue;
+    private int mFramesCount = 0;
     private long mCurrentMiliseconds;
     private ArrayList<Integer> mBpmCandidates = new ArrayList<Integer>();
     private int mCountDowns = 0;
@@ -72,6 +72,9 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private long mRecoverTime = 0;
     private Float mLastRawValue = 0f;
     private TimeWindowContainer mContainer;
+    private int defaultPreset = 7;
+    private int adaptedPreset;
+    private boolean isAdapted = false;
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -144,16 +147,15 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         });
 
         setBoundingState(1);
-        ImageButton boundingBoxSwitcher =  findViewById(R.id.boundingBoxSwitcher);
+        ImageButton boundingBoxSwitcher = findViewById(R.id.boundingBoxSwitcher);
         boundingBoxSwitcher.setBackgroundResource(R.drawable.ic_boundingbox_off_foreground);
         boundingBoxSwitcher.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (getBoundingState() == 1){
+                if (getBoundingState() == 1) {
                     setBoundingState(0);
                     boundingBoxSwitcher.setBackgroundResource(R.drawable.ic_boundingbox_on_foreground);
-                }
-                else{
+                } else {
                     setBoundingState(1);
                     boundingBoxSwitcher.setBackgroundResource(R.drawable.ic_boundingbox_off_foreground);
                 }
@@ -181,6 +183,9 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 }
             }
         });
+
+        TextView tv = (TextView) findViewById(R.id.tv_heartrate);
+        tv.setText("Measuring, wait a moment...");
 
     }
 
@@ -335,10 +340,15 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 if (mDropFrames == 0) {
                     mLastDropTime = mCurrentMiliseconds;
                     mContainer.add(mLastDropTime);
+                } else if (mDropFrames >= 20) {
+                    mRawPPGIVals.clear();
+                    Toast toast = Toast.makeText(this, "Disconnected, please place your face into bounding box", Toast.LENGTH_LONG);
+                    toast.show();
+                    mDropFrames = 1;
                 }
                 mDropFrames += 1;
                 // Placeholder for non faces images
-                updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds));
+                updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds), false);
             }
             return frame;
         } else {    // in the mode of potrait, where the image is in the wrong direction
@@ -395,10 +405,16 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 if (mDropFrames == 0) {
                     mLastDropTime = mCurrentMiliseconds;
                     mContainer.add(mLastDropTime);
+                } else if (mDropFrames >= 20) {
+                    mRawPPGIVals.clear();
+                    Toast toast = Toast.makeText(this, "Disconnected, please place your face into bounding box", Toast.LENGTH_LONG);
+                    toast.show();
+                    mDropFrames = 1;
                 }
+
                 mDropFrames += 1;
                 // Placeholder for non faces images
-                updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds));
+                updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds), false);
             }
 
 
@@ -451,6 +467,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         Core.meanStdDev(mGreenChannel, mMeanValue, mStdDev);
         Double mean = mMeanValue.toList().get(0);
         Float tmp = mean.floatValue();
+        mLastRawValue = tmp;
         addAndDetermine(tmp);
         // calculate Raw values here
     }
@@ -458,146 +475,25 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     public void addAndDetermine(Float rawValue) {
         mRearValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
         //printRawValueAsText(mRearValue);
-        updateRawValues(mRearValue);
-        findPeakValues();
+        updateRawValues(mRearValue, true);
     }
 
-
-    public void updateRawValues(RawPPGIValue rawValue) {
-        if (mRawPPGIVals.size() == 80) {
-            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1, 80));
+    public void updateRawValues(RawPPGIValue rawValue, boolean validity) {
+        if (mRawPPGIVals.size() == 150) {
+            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1, 150));
             mRawPPGIVals = tmp;
             mRawPPGIVals.add(rawValue);
         } else {
             mRawPPGIVals.add(rawValue);
         }
         printRawPeakValueAsText(rawValue);
-    }
 
-    public void findPeakValues() {
-        int mCount = mRawPPGIVals.size();
-
-        if (mCount <= 20) {
-            return;
-        }
-
-        if (mCount > 20) {
-            RawPPGIValue mCandidate = mRawPPGIVals.get(mCount - 11);
-
-            for (int index = 1; index < 8; index++) {
-                if (mCandidate.getValue() < mRawPPGIVals.get(mCount - 11 - index).getValue() || mCandidate.getValue() < mRawPPGIVals.get(mCount - 11 + index).getValue()) {
-                    return;
-                }
-            }
-            updatePeakValues(mCandidate);
-        }
-    }
-
-    public void updatePeakValues(RawPPGIValue rawValue) {
-        int mArraySize = mPeakPPGIVals.size();
-        if (mArraySize > 19) {
-            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mPeakPPGIVals.subList(1, 20));
-            mPeakPPGIVals = tmp;
-            mPeakPPGIVals.add(rawValue);
-            mLastPeakValue = mPeakPPGIVals.get(18);
-            mCurrentPeakValue = mPeakPPGIVals.get(19);
-
-            long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
-            int nArraySize = mPeakPPGIVals.size();
-            compareAndCalculate();
-
-        } else if (mArraySize > 0) {
-            mLastPeakValue = mPeakPPGIVals.get(mPeakPPGIVals.size() - 1);
-            mCurrentPeakValue = rawValue;
-            mPeakPPGIVals.add(rawValue);
-            long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
-            int nArraySize = mPeakPPGIVals.size();
-            compareAndCalculate();
+        if (mFramesCount < 150) {
+            mFramesCount++;
         } else {
-            mPeakPPGIVals.add(rawValue);
-            mCurrentPeakValue = rawValue;
+            calculateHeartRate();
+            mFramesCount = 0;
         }
-    }
-
-    public void compareAndCalculate() {
-        long interval = calculateTimeInterval();
-        if (interval > 0 && !mContainer.isInTimeWindowContainer(mLastPeakValue.getCurrentTime())) {
-            calculateHeartbeat(interval);
-        }
-    }
-
-    public long calculateTimeInterval() {
-        long mTimeInterval = mCurrentPeakValue.getCurrentTime() - mLastPeakValue.getCurrentTime();
-        String msg = "Current peak: " + Long.toString(mCurrentPeakValue.getCurrentTime()) + " Last peak: "
-                + Long.toString(mLastPeakValue.getCurrentTime()) + " Time interval: " +
-                Long.toString(mTimeInterval) + "\n";
-        Log.d("Check! ", msg);
-        return mTimeInterval;
-    }
-
-    public void calculateHeartbeat(long interval) {
-        long mLongCandidateBpm = (1 * 1000 * 60 / interval);
-        int mCandidateBpm = Math.round(mLongCandidateBpm);
-        String msg = "Candidate heartbeat: " + Long.toString(mLongCandidateBpm) + " Countdowns: " +
-                Integer.toString(mCountDowns) + "\n";
-        Log.d("Check", msg);
-        if (mCountDowns < 5) {
-            mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
-            mCountDowns++;
-        } else if (mBpmCandidates.size() == 20) {
-            ArrayList<Integer> tmp = new ArrayList<Integer>(mBpmCandidates.subList(1, 20));
-            mBpmCandidates = tmp;
-            mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
-            if (mCountDowns == 5) {
-                int averageBpm = calculate();
-                mCountDowns = 0;
-                TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
-                tv.setText(Integer.toString(averageBpm));
-            }
-            mCountDowns++;
-
-        } else {
-            mBpmCandidates.add(Integer.valueOf(mCandidateBpm));
-            if (mCountDowns == 5) {
-                int averageBpm = calculate();
-                mCountDowns = 0;
-                TextView tv = (TextView) (findViewById(R.id.tv_heartrate));
-                tv.setText(Integer.toString(averageBpm));
-
-            }
-            mCountDowns++;
-        }
-    }
-
-    public int calculate() {
-        int sum = 0;
-        int dropCount = 0;
-        int addCount = 0;
-        if (mBpmCandidates.size() <= 10) {
-            for (int value : mBpmCandidates) {
-                if (value < 400 && value > 30) {
-                    sum += value;
-                } else {
-                    dropCount++;
-                }
-            }
-
-            float temp = (float) sum / (mBpmCandidates.size() - dropCount);
-            int average = Math.round(temp);
-            return average;
-        }
-        int arraySize = mBpmCandidates.size();
-        int startIndex = arraySize - 10;
-        for (int i = startIndex; i < arraySize; i++) {
-            if (mBpmCandidates.get(i) < 350 && mBpmCandidates.get(i) > 25) {
-                sum += mBpmCandidates.get(i);
-            } else {
-                dropCount++;
-            }
-        }
-        float temp = (float) sum / (10 - dropCount);
-        int average = Math.round(temp);
-        return average;
     }
 
     public void printRawPeakValueAsText(RawPPGIValue value) {
@@ -627,5 +523,67 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 e.printStackTrace();
             }
         }
+    }
+
+    public void calculateHeartRate() {
+
+        int corruptionCount = 0;
+        String msg = "";
+        int peakCounts = 0;
+        int startIndex = 0;
+        int endIndex = 0;
+        int mPreset;
+        if( isAdapted ){
+            mPreset = adaptedPreset;
+        }else {
+            mPreset = adaptedPreset;
+        }
+
+        Out:
+        for (int i = 0; i < mRawPPGIVals.size(); i++) {
+
+            Log.d("DVDCheck", "I am here in for! ");
+            RawPPGIValue candidate = mRawPPGIVals.get(i);
+            if (!candidate.getValidity()) {
+                corruptionCount++;
+            }
+            if (i < 20 || i > 130) {   // not into consideration for too few samples in surroundings;
+                continue;
+            }
+
+            for (int j = 1; j < mPreset; j++) {
+                if (candidate.getValue() < mRawPPGIVals.get(i - j).getValue() || candidate.getValue() < mRawPPGIVals.get(i + j).getValue()) {
+                    continue Out;
+                }
+            }
+
+            Log.d("DVDCheck", "I am here! ");
+            if (peakCounts == 0) {
+                startIndex = i;
+            }
+            peakCounts++;
+            endIndex = i;
+        }
+
+        long timeDistance = mRawPPGIVals.get(endIndex).getCurrentTime() - mRawPPGIVals.get(startIndex).getCurrentTime();
+        int BPM = Math.round(1000 * 60 * peakCounts / timeDistance);
+
+        if (corruptionCount >= 20) {
+            msg += Integer.toString(corruptionCount) + "/150 corrupted samples,the result could be inaccurate!\n";
+        } else {
+            if (!isAdapted){
+                msg += "Measuring roughly your heart rate for late processing";
+                if(BPM >= 120){
+                    adaptedPreset = 15;
+                    isAdapted = true;
+                }
+            }else{
+            msg += "Heart rate: " + Integer.toString(BPM);
+            Log.d("Hearte rate", msg);
+            }
+        }
+
+        TextView tv = findViewById(R.id.tv_heartrate);
+        tv.setText(msg);
     }
 }

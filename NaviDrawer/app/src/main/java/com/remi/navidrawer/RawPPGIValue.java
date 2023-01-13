@@ -12,6 +12,8 @@ import java.util.TimeZone;
 public class RawPPGIValue implements Parcelable {
     private Float mValue;
     private long mCurrentTime;
+    private boolean validity = true;
+    private boolean tested = false;
 
     public RawPPGIValue(Float value, Calendar current){
         mValue = value;
@@ -84,5 +86,21 @@ public class RawPPGIValue implements Parcelable {
         String msg;
         msg ="Time: " + date + " Value: " + Float.toString(mValue) + "\n";
         return msg;
+    }
+
+    public void setValidity(boolean value) {
+        this.validity = value;
+    }
+
+    public boolean getValidity() {
+        return validity;
+    }
+
+    public void setTested(){
+        tested = true;
+    }
+
+    public boolean ifTested() {
+        return tested;
     }
 }
