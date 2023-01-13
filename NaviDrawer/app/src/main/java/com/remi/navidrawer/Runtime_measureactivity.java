@@ -72,9 +72,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private long mRecoverTime = 0;
     private Float mLastRawValue = 0f;
     private TimeWindowContainer mContainer;
-    private int defaultPreset = 7;
+    private int defaultPreset = 6;
+    private int defaultOffset = 3;
     private int adaptedPreset;
+    private int adaptedOffset;
     private boolean isAdapted = false;
+    private ArrayList<Integer> BpmList = new ArrayList<Integer>();
 
 
     private BaseLoaderCallback mBaseLoaderCallback = new BaseLoaderCallback(this) {
@@ -341,14 +344,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     mLastDropTime = mCurrentMiliseconds;
                     mContainer.add(mLastDropTime);
                 } else if (mDropFrames >= 20) {
-                    mRawPPGIVals.clear();
-                    Toast toast = Toast.makeText(this, "Disconnected, please place your face into bounding box", Toast.LENGTH_LONG);
-                    toast.show();
+                    mRawPPGIVals.removeAll(mRawPPGIVals);
+                    mFramesCount = 0;
                     mDropFrames = 1;
                 }
                 mDropFrames += 1;
                 // Placeholder for non faces images
-                updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds), false);
             }
             return frame;
         } else {    // in the mode of potrait, where the image is in the wrong direction
@@ -406,15 +407,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     mLastDropTime = mCurrentMiliseconds;
                     mContainer.add(mLastDropTime);
                 } else if (mDropFrames >= 20) {
-                    mRawPPGIVals.clear();
-                    Toast toast = Toast.makeText(this, "Disconnected, please place your face into bounding box", Toast.LENGTH_LONG);
-                    toast.show();
+                    mRawPPGIVals.removeAll(mRawPPGIVals);
+                    mFramesCount = 0;
                     mDropFrames = 1;
                 }
-
                 mDropFrames += 1;
                 // Placeholder for non faces images
-                updateRawValues(new RawPPGIValue(mLastRawValue, mCurrentMiliseconds), false);
             }
 
 
@@ -479,8 +477,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     }
 
     public void updateRawValues(RawPPGIValue rawValue, boolean validity) {
-        if (mRawPPGIVals.size() == 150) {
-            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1, 150));
+        if (mRawPPGIVals.size() == 180) {
+            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1, 180));
             mRawPPGIVals = tmp;
             mRawPPGIVals.add(rawValue);
         } else {
@@ -488,7 +486,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         }
         printRawPeakValueAsText(rawValue);
 
-        if (mFramesCount < 150) {
+        if (mFramesCount < 180) {
             mFramesCount++;
         } else {
             calculateHeartRate();
@@ -533,11 +531,17 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         int startIndex = 0;
         int endIndex = 0;
         int mPreset;
+        int mOffset;
+
+
         if( isAdapted ){
             mPreset = adaptedPreset;
+            mOffset = adaptedOffset;
         }else {
-            mPreset = adaptedPreset;
+            mPreset = defaultPreset;
+            mOffset = defaultOffset;
         }
+
 
         Out:
         for (int i = 0; i < mRawPPGIVals.size(); i++) {
@@ -547,7 +551,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             if (!candidate.getValidity()) {
                 corruptionCount++;
             }
-            if (i < 20 || i > 130) {   // not into consideration for too few samples in surroundings;
+            if (i < 20 || i > 160) {   // not into consideration for too few samples in surroundings;
                 continue;
             }
 
@@ -557,6 +561,19 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 }
             }
 
+            int valid = 0;
+            for (int j = mPreset; j < mPreset  + mOffset; j++){
+                if (candidate.getValue() > mRawPPGIVals.get(i - j).getValue())
+                    valid += 1;
+
+                if (candidate.getValue() > mRawPPGIVals.get(i + j).getValue())
+                    valid += 1;
+            }
+
+            if (valid < 2*mOffset - 1)
+            {
+                continue Out;
+            }
             Log.d("DVDCheck", "I am here! ");
             if (peakCounts == 0) {
                 startIndex = i;
@@ -567,18 +584,28 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
         long timeDistance = mRawPPGIVals.get(endIndex).getCurrentTime() - mRawPPGIVals.get(startIndex).getCurrentTime();
         int BPM = Math.round(1000 * 60 * peakCounts / timeDistance);
+        Log.d("Initial BPM", Integer.toString(BPM));
 
         if (corruptionCount >= 20) {
             msg += Integer.toString(corruptionCount) + "/150 corrupted samples,the result could be inaccurate!\n";
         } else {
             if (!isAdapted){
-                msg += "Measuring roughly your heart rate for late processing";
-                if(BPM >= 120){
-                    adaptedPreset = 15;
+                msg += "Applying preset, please wait...";
+                if( 160 >=BPM && BPM >= 120){
+                    adaptedPreset = 12;
+                    adaptedOffset = 6;
                     isAdapted = true;
+                }else if(BPM < 120){
+                    adaptedPreset = 15;
+                    adaptedOffset = 8;
                 }
             }else{
-            msg += "Heart rate: " + Integer.toString(BPM);
+            BpmList.add(BPM);
+
+            int outputBPM = calcaulateAverages();
+            resetPresets(outputBPM);
+
+            msg += "Heart rate: " + Integer.toString(outputBPM);
             Log.d("Hearte rate", msg);
             }
         }
@@ -586,4 +613,57 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         TextView tv = findViewById(R.id.tv_heartrate);
         tv.setText(msg);
     }
+
+    public int calcaulateAverages() {
+        int listSize = BpmList.size();
+        int sum = 0;
+        if (listSize < 5)
+        {
+            for (int value:BpmList)
+            {
+                sum += value;
+            }
+            return sum/listSize;
+        }
+        else{
+        for (int index = listSize -5; index < listSize ; index++)
+        {
+            sum += BpmList.get(index);
+        }
+        return sum/5;
+        }
+    }
+
+    public void resetPresets(int bpm){
+        if( adaptedPreset == 6)
+        {
+            if( 160 >=bpm && bpm >= 120){
+                adaptedPreset = 12;
+                adaptedOffset = 6;
+            }else if(bpm < 120){
+                adaptedPreset = 15;
+                adaptedOffset = 8;
+            }
+        }
+
+        if ( adaptedPreset == 12)
+        {
+            if(  bpm >= 110){
+                adaptedPreset = 6;
+                adaptedOffset = 3;
+            }else if(bpm < 65){
+                adaptedPreset = 15;
+                adaptedOffset = 8;
+            }
+        }
+
+        if ( adaptedPreset == 15)
+        {
+            if(  bpm >= 70){
+                adaptedPreset = 12;
+                adaptedOffset = 6;
+            }
+        }
+    }
+
 }
