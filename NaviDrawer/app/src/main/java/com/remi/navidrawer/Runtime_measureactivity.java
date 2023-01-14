@@ -9,12 +9,16 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import com.codingending.popuplayout.*;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
@@ -69,13 +73,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private String mOutputFilename = "";
     private int mDropFrames = 0;
     private long mLastDropTime = 0;
-    private long mRecoverTime = 0;
-    private Float mLastRawValue = 0f;
     private TimeWindowContainer mContainer;
     private int defaultPreset = 6;
     private int defaultOffset = 3;
     private int adaptedPreset;
     private int adaptedOffset;
+    private boolean showingPopout = false;
     private boolean isAdapted = false;
     private ArrayList<Integer> BpmList = new ArrayList<Integer>();
 
@@ -327,8 +330,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             Rect[] facesArray = faces.toArray();
             if (facesArray.length > 0) {
                 if (mDropFrames > 0) {
-                    mRecoverTime = mCurrentMiliseconds;
-                    mContainer.add(mRecoverTime);
                     mDropFrames = 0;
                 }
                 for (int i = 0; i < facesArray.length; i++) {
@@ -340,15 +341,35 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     startMeasure(faceROI, frame, facesArray[i].tl());
                 }
             } else {
-                if (mDropFrames == 0) {
-                    mLastDropTime = mCurrentMiliseconds;
-                    mContainer.add(mLastDropTime);
-                } else if (mDropFrames >= 20) {
+                 if (mDropFrames >= 30) {
                     mRawPPGIVals.removeAll(mRawPPGIVals);
                     mFramesCount = 0;
-                    mDropFrames = 1;
+
+                    showingPopout = true;
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            View view = View.inflate(Runtime_measureactivity.this, R.layout.popout_layout, null);
+                            PopupLayout popupLayout = PopupLayout.init(Runtime_measureactivity.this, view);
+                            popupLayout.setDismissListener(new PopupLayout.DismissListener() {
+                                @Override
+                                public void onDismiss() {
+                                    showingPopout = false;
+                                }
+                            });
+                            popupLayout.setHeight(120, true);
+                            popupLayout.setWidth(360,true);
+                            popupLayout.show(PopupLayout.POSITION_TOP);
+                            popupLayout.show();
+                        }
+                    });
+
+                    mDropFrames = 0;
+
                 }
-                mDropFrames += 1;
+                if (!showingPopout) {
+                    mDropFrames += 1;
+                }
                 // Placeholder for non faces images
             }
             return frame;
@@ -390,8 +411,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             Rect[] facesArray = faces.toArray();
             if (facesArray.length > 0) {
                 if (mDropFrames > 0) {
-                    mRecoverTime = mCurrentMiliseconds;
-                    mContainer.add(mRecoverTime);
                     mDropFrames = 0;
                 }
                 for (int i = 0; i < facesArray.length; i++) {
@@ -403,16 +422,37 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     startMeasure(faceROI, rotatedFrame, facesArray[i].tl());
                 }
             } else {
-                if (mDropFrames == 0) {
-                    mLastDropTime = mCurrentMiliseconds;
-                    mContainer.add(mLastDropTime);
-                } else if (mDropFrames >= 20) {
+
+                if (mDropFrames >= 30) {
                     mRawPPGIVals.removeAll(mRawPPGIVals);
                     mFramesCount = 0;
-                    mDropFrames = 1;
+
+
+                    showingPopout = true;
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            View view = View.inflate(Runtime_measureactivity.this, R.layout.popout_layout, null);
+                            PopupLayout popupLayout = PopupLayout.init(Runtime_measureactivity.this, view);
+                            popupLayout.setDismissListener(new PopupLayout.DismissListener() {
+                                @Override
+                                public void onDismiss() {
+                                    showingPopout = false;
+                                }
+                            });
+                            popupLayout.setHeight(120, true);
+                            popupLayout.show(PopupLayout.POSITION_BOTTOM);
+                            popupLayout.show();
+                        }
+                    });
+
+                    mDropFrames = 0;
+
                 }
-                mDropFrames += 1;
-                // Placeholder for non faces images
+                if (!showingPopout) {
+                    mDropFrames += 1;
+                }
+
             }
 
 
@@ -465,7 +505,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         Core.meanStdDev(mGreenChannel, mMeanValue, mStdDev);
         Double mean = mMeanValue.toList().get(0);
         Float tmp = mean.floatValue();
-        mLastRawValue = tmp;
         addAndDetermine(tmp);
         // calculate Raw values here
     }
@@ -534,10 +573,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         int mOffset;
 
 
-        if( isAdapted ){
+        if (isAdapted) {
             mPreset = adaptedPreset;
             mOffset = adaptedOffset;
-        }else {
+        } else {
             mPreset = defaultPreset;
             mOffset = defaultOffset;
         }
@@ -562,7 +601,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
 
             int valid = 0;
-            for (int j = mPreset; j < mPreset  + mOffset; j++){
+            for (int j = mPreset; j < mPreset + mOffset; j++) {
                 if (candidate.getValue() > mRawPPGIVals.get(i - j).getValue())
                     valid += 1;
 
@@ -570,8 +609,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     valid += 1;
             }
 
-            if (valid < 2*mOffset - 1)
-            {
+            if (valid < 2 * mOffset - 1) {
                 continue Out;
             }
             Log.d("DVDCheck", "I am here! ");
@@ -589,24 +627,24 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         if (corruptionCount >= 20) {
             msg += Integer.toString(corruptionCount) + "/150 corrupted samples,the result could be inaccurate!\n";
         } else {
-            if (!isAdapted){
+            if (!isAdapted) {
                 msg += "Applying preset, please wait...";
-                if( 160 >=BPM && BPM >= 120){
+                if (160 >= BPM && BPM >= 120) {
                     adaptedPreset = 12;
                     adaptedOffset = 6;
                     isAdapted = true;
-                }else if(BPM < 120){
+                } else if (BPM < 120) {
                     adaptedPreset = 15;
                     adaptedOffset = 8;
                 }
-            }else{
-            BpmList.add(BPM);
+            } else {
+                BpmList.add(BPM);
 
-            int outputBPM = calcaulateAverages();
-            resetPresets(outputBPM);
+                int outputBPM = calcaulateAverages();
+                resetPresets(outputBPM);
 
-            msg += "Heart rate: " + Integer.toString(outputBPM);
-            Log.d("Hearte rate", msg);
+                msg += "Heart rate: " + Integer.toString(outputBPM);
+                Log.d("Hearte rate", msg);
             }
         }
 
@@ -617,49 +655,42 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     public int calcaulateAverages() {
         int listSize = BpmList.size();
         int sum = 0;
-        if (listSize < 5)
-        {
-            for (int value:BpmList)
-            {
+        if (listSize < 5) {
+            for (int value : BpmList) {
                 sum += value;
             }
-            return sum/listSize;
-        }
-        else{
-        for (int index = listSize -5; index < listSize ; index++)
-        {
-            sum += BpmList.get(index);
-        }
-        return sum/5;
+            return sum / listSize;
+        } else {
+            for (int index = listSize - 5; index < listSize; index++) {
+                sum += BpmList.get(index);
+            }
+            return sum / 5;
         }
     }
 
-    public void resetPresets(int bpm){
-        if( adaptedPreset == 6)
-        {
-            if( 160 >=bpm && bpm >= 120){
+    public void resetPresets(int bpm) {
+        if (adaptedPreset == 6) {
+            if (160 >= bpm && bpm >= 120) {
                 adaptedPreset = 12;
                 adaptedOffset = 6;
-            }else if(bpm < 120){
+            } else if (bpm < 120) {
                 adaptedPreset = 15;
                 adaptedOffset = 8;
             }
         }
 
-        if ( adaptedPreset == 12)
-        {
-            if(  bpm >= 110){
+        if (adaptedPreset == 12) {
+            if (bpm >= 110) {
                 adaptedPreset = 6;
                 adaptedOffset = 3;
-            }else if(bpm < 65){
+            } else if (bpm < 65) {
                 adaptedPreset = 15;
                 adaptedOffset = 8;
             }
         }
 
-        if ( adaptedPreset == 15)
-        {
-            if(  bpm >= 70){
+        if (adaptedPreset == 15) {
+            if (bpm >= 70) {
                 adaptedPreset = 12;
                 adaptedOffset = 6;
             }
