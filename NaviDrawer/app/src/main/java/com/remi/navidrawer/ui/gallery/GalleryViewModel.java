@@ -10,9 +10,7 @@ import android.util.Log;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import com.remi.navidrawer.Cards;
-import com.remi.navidrawer.R;
 
 import java.io.File;
 import java.util.ArrayList;

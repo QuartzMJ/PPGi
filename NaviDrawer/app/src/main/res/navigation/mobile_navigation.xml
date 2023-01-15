@@ -28,4 +28,10 @@
         android:name="com.remi.navidrawer.ui.slideshow.SlideshowFragment"
         android:label="@string/menu_slideshow"
         tools:layout="@layout/fragment_slideshow" />
+
+    <fragment
+        android:id="@+id/nav_contact"
+        android:name="com.remi.navidrawer.ui.contact.ContactFragment"
+        android:label="Contact us!"
+        tools:layout="@layout/fragment_contact" />
 </navigation>

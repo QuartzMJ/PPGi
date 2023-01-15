@@ -8,7 +8,7 @@ public class Cards {
     private boolean mIsBitmap = false;
     private Bitmap mBitmap;
 
-    public enum cardType {intro, guide,gallery};
+    public enum cardType {intro, guide,gallery,contact};
     private cardType mType;
 
     public String getText() {
