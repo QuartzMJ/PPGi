@@ -1,19 +1,15 @@
-package com.remi.navidrawer.ui;
+package com.remi.navidrawer;
 
-import android.content.ClipData;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import com.remi.navidrawer.ui.home.Cards;
+
 import java.util.ArrayList;
-import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.remi.navidrawer.R;
 
 public class CardAdapter extends RecyclerView.Adapter<CardAdapter.Itemholder> {
     private String[] mText;

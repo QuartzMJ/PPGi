@@ -648,8 +648,14 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             }
         }
 
-        TextView tv = findViewById(R.id.tv_heartrate);
-        tv.setText(msg);
+        String message = msg;
+
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                TextView tv = findViewById(R.id.tv_heartrate);
+                tv.setText(message);
+            }});
     }
 
     public int calcaulateAverages() {

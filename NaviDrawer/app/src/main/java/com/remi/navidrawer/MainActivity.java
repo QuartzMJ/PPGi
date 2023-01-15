@@ -84,7 +84,8 @@ public class MainActivity extends AppCompatActivity {
                                 Manifest.permission.READ_EXTERNAL_STORAGE
         } :
                         new String[]{Manifest.permission.CAMERA,
-                                Manifest.permission.RECORD_AUDIO};
+                                Manifest.permission.RECORD_AUDIO,
+                                Manifest.permission.MANAGE_EXTERNAL_STORAGE};
     }
 
     @Override

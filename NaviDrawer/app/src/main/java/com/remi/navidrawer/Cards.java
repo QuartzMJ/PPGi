@@ -1,4 +1,4 @@
-package com.remi.navidrawer.ui.home;
+package com.remi.navidrawer;
 
 public class Cards {
     private String mDescription;

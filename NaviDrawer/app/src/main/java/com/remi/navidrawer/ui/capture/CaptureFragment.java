@@ -82,12 +82,14 @@ public class CaptureFragment extends Fragment {
 
     private void startCamera() {
 
+
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(getContext());
 
         cameraProviderFuture.addListener(() -> {
             try {
 
                 ProcessCameraProvider processCameraProvider = cameraProviderFuture.get();
+
 
                 Preview preview = new Preview.Builder()
                         .build();
@@ -105,6 +107,7 @@ public class CaptureFragment extends Fragment {
                 processCameraProvider.bindToLifecycle(this, cameraSelector,
                         videoCapture,
                         preview);
+
             } catch (Exception e) {
                 Log.e(Configuration.TAG, "Binding magic  failed ！" + e);
             }
@@ -178,7 +181,8 @@ public class CaptureFragment extends Fragment {
                                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                 Manifest.permission.READ_EXTERNAL_STORAGE} :
                         new String[]{Manifest.permission.CAMERA,
-                                Manifest.permission.RECORD_AUDIO};
+                                Manifest.permission.RECORD_AUDIO,
+                                Manifest.permission.MANAGE_EXTERNAL_STORAGE};
     }
 
     @Override

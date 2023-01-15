@@ -3,7 +3,7 @@ package com.remi.navidrawer.ui.home;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-import com.remi.navidrawer.ui.home.Cards;
+import com.remi.navidrawer.Cards;
 
 import com.remi.navidrawer.R;
 
