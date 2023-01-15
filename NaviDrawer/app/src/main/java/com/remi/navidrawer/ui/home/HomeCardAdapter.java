@@ -1,4 +1,4 @@
-package com.remi.navidrawer;
+package com.remi.navidrawer.ui.home;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,12 +11,15 @@ import java.util.ArrayList;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-public class CardAdapter extends RecyclerView.Adapter<CardAdapter.Itemholder> {
+import com.remi.navidrawer.Cards;
+import com.remi.navidrawer.R;
+
+public class HomeCardAdapter extends RecyclerView.Adapter<HomeCardAdapter.Itemholder> {
     private String[] mText;
     private  int[] mPic;
     ArrayList<Cards> userArraylist;
 
-    public CardAdapter() {
+    public HomeCardAdapter() {
        this.userArraylist = new ArrayList<Cards>();
     }
 
@@ -33,7 +36,7 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.Itemholder> {
         Cards mCard = userArraylist.get(position);
         Itemholder mItemHolder = (Itemholder) holder;
         mItemHolder.getmPic().setImageResource(mCard.getPic());
-        mItemHolder.getmTextView().setText(mCard.getDescription());
+        mItemHolder.getmTextView().setText(mCard.getText());
     }
 
     @Override

@@ -56,6 +56,5 @@ dependencies {
     implementation "androidx.camera:camera-extensions:${camerax_version}"
     implementation "androidx.recyclerview:recyclerview:1.2.1"
     implementation "androidx.recyclerview:recyclerview-selection:1.1.0"
-
     implementation 'com.github.CodingEnding:PopupLayout:v1.0'
 }
