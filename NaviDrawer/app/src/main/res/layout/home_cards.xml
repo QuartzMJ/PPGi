@@ -2,7 +2,7 @@
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/introCardView"
+    android:id="@+id/homeCardView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     app:cardCornerRadius="20dp"
@@ -31,12 +31,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1.5"
-            android:layout_margin="10dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="45dp"
             android:text="@string/ppgi_description"
-            android:textSize="20sp"
+            android:textSize="25sp"
             android:ellipsize="end"
-            android:maxLines="6"/>
-
+            android:maxLines="7"/>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 

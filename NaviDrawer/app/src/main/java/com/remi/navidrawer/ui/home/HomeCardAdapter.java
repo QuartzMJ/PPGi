@@ -5,10 +5,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.remi.navidrawer.Cards;
@@ -18,6 +18,10 @@ public class HomeCardAdapter extends RecyclerView.Adapter<HomeCardAdapter.Itemho
     private String[] mText;
     private  int[] mPic;
     ArrayList<Cards> userArraylist;
+    public interface OnItemClickListener {
+        void onItemClick(View view, int position);
+    }
+    private OnItemClickListener mOnItemClickListener;
 
     public HomeCardAdapter() {
        this.userArraylist = new ArrayList<Cards>();
@@ -27,7 +31,7 @@ public class HomeCardAdapter extends RecyclerView.Adapter<HomeCardAdapter.Itemho
     @Override
     public Itemholder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.recyclerview_cards, parent, false);
+                .inflate(R.layout.home_cards, parent, false);
         return new Itemholder(view);
     }
 
@@ -35,8 +39,17 @@ public class HomeCardAdapter extends RecyclerView.Adapter<HomeCardAdapter.Itemho
     public void onBindViewHolder(@NonNull Itemholder holder, int position) {
         Cards mCard = userArraylist.get(position);
         Itemholder mItemHolder = (Itemholder) holder;
-        mItemHolder.getmPic().setImageResource(mCard.getPic());
-        mItemHolder.getmTextView().setText(mCard.getText());
+        mItemHolder.getPic().setImageResource(mCard.getPic());
+        mItemHolder.getTextView().setText(mCard.getText());
+        CardView mCardView = (CardView) mItemHolder.getCardView();
+        if(mOnItemClickListener != null) {
+            mCardView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mOnItemClickListener.onItemClick(mItemHolder.itemView, mItemHolder.getLayoutPosition());
+                }
+            });
+        }
     }
 
     @Override
@@ -53,18 +66,25 @@ public class HomeCardAdapter extends RecyclerView.Adapter<HomeCardAdapter.Itemho
     public static class Itemholder extends RecyclerView.ViewHolder {
         private final TextView mTextView;
         private final ImageView mPic;
+        private final CardView mCardView;
         public Itemholder(View view) {
             super(view);
             mTextView = (TextView) view.findViewById(R.id.introText);
             mPic = (ImageView) view.findViewById(R.id.introImage);
+            mCardView = (CardView) view.findViewById(R.id.homeCardView);
         }
 
-        public ImageView getmPic() {
+        public ImageView getPic() {
             return mPic;
         }
-        public TextView getmTextView() {
+        public TextView getTextView() {
             return mTextView;
         }
+        public CardView getCardView() {return  mCardView;}
+    }
+
+    public void setOnItemClickListener(OnItemClickListener mOnItemClickListener) {
+        this.mOnItemClickListener = mOnItemClickListener;
     }
 
 }
