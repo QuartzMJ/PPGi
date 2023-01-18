@@ -1,14 +1,17 @@
 package com.remi.navidrawer.ui.home;
 
+import android.annotation.SuppressLint;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -16,14 +19,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.codingending.popuplayout.PopupLayout;
-import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.appbar.CollapsingToolbarLayout;
+import androidx.appcompat.widget.Toolbar;
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.MainActivity;
 import com.remi.navidrawer.PagesContainer;
 import com.remi.navidrawer.R;
-import com.remi.navidrawer.ResourceProvider;
-import com.remi.navidrawer.Runtime_measureactivity;
 import com.remi.navidrawer.databinding.FragmentHomeBinding;
 
 import java.util.ArrayList;
@@ -50,13 +50,23 @@ public class HomeFragment extends Fragment {
         introRecyclerView.setAdapter(mHomeCardAdapter);
         introRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
         mHomeCardAdapter.setOnItemClickListener(new HomeCardAdapter.OnItemClickListener() {
+            @SuppressLint("RestrictedApi")
+            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void onItemClick(View view, int position) {
                 View mView = View.inflate(getContext(), R.layout.detail_page, null);
                 PopupLayout popupLayout = PopupLayout.init(getContext(), mView);
 
-                CollapsingToolbarLayout appbar = mView.findViewById(R.id.collapsing_toolbar);
+
+                Toolbar appbar = mView.findViewById(R.id.toolbar);
                 appbar.setTitle(mPagesContainerList.get(position).getPageTitle());
+
+                appbar.setNavigationOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Log.d("Appbar back test", "onClick");
+                    }
+                });
 
                 ImageView imageView = (ImageView) mView.findViewById(R.id.detailImage);
                 imageView.setImageResource(mPagesContainerList.get(position).getPagePic());

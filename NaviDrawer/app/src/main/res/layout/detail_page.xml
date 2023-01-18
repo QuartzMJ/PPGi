@@ -18,7 +18,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:collapsedTitleGravity="center"
-            app:contentScrim="?attr/colorPrimary"
             app:layout_scrollFlags="scroll|exitUntilCollapsed">
 
             <ImageView
@@ -34,6 +33,8 @@
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
+                android:textAlignment="center"
+                app:navigationIcon="?homeAsUpIndicator"
                 app:layout_collapseMode="pin" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
