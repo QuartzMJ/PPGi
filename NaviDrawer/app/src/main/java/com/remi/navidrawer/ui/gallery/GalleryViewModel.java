@@ -1,6 +1,7 @@
 package com.remi.navidrawer.ui.gallery;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.ThumbnailUtils;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -10,9 +11,14 @@ import android.util.Log;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+
 import com.remi.navidrawer.Cards;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
 public class GalleryViewModel extends ViewModel {
@@ -21,58 +27,63 @@ public class GalleryViewModel extends ViewModel {
     ArrayList<Cards> galleryCards = new ArrayList<>();
 
 
-    public GalleryViewModel() {
+    public GalleryViewModel() throws IOException {
         galleryCardLiveData = new MutableLiveData<>();
         initialize();
     }
 
-    public void initialize(){
+    public void initialize() throws IOException {
         populateList();
         galleryCardLiveData.setValue(galleryCards);
-        Log.d("initialize finished", "continue");
     }
 
-    public LiveData<ArrayList<Cards>> getGalleryCardLiveData(){
+    public LiveData<ArrayList<Cards>> getGalleryCardLiveData() {
         return galleryCardLiveData;
     }
 
-    public void populateList(){
+    public void populateList() throws IOException {
         String path = Environment.getExternalStoragePublicDirectory("ppgi").getAbsolutePath();
-        Log.d("Path test", path);
 
         File dir = new File(path);
         File[] files = dir.listFiles();
-        Log.d("files number", Integer.toString(files.length));
 
         for (File file : files) {
-            if( ifVideo(file.getName()) == true )
-            {
-
-                Log.d("ifVideo true:", file.getPath());
+            if (ifVideo(file.getName()) == true) {
                 Cards card = new Cards();
                 card.setText(file.getName());
                 card.setType(Cards.cardType.gallery);
-                Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MICRO_KIND);
+
+                String picName = file.getAbsolutePath().substring(0, file.getAbsolutePath().length() - 4) + ".jpg";
+                File picFile = new File(picName);
+                Bitmap bitmap;
+                if (!picFile.exists()) {
+                    bitmap = ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MICRO_KIND);
+                    OutputStream stream;
+                    stream = new FileOutputStream(picFile);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG,100,stream);
+                    stream.flush();
+                    stream.close();
+                }else{
+                     bitmap = BitmapFactory.decodeFile(picFile.getAbsolutePath());
+                }
+
                 card.setPic(bitmap);
+
                 galleryCards.add(card);
             }
         }
     }
 
-    public boolean ifVideo(String filename)
-    {
+    public boolean ifVideo(String filename) {
         if (filename.length() <= 3)
             return false;
 
         int length = filename.length();
         String subString = filename.substring(length - 3, length);
-
-
-        if(subString.equals("mp4") || subString.equals("3gp") || subString.equals("avi")){
-            Log.d("Filename extension", subString);
+        if (subString.equals("mp4") || subString.equals("3gp") || subString.equals("avi")) {
             return true;
-        }
-        else
+        } else
             return false;
     }
+
 }

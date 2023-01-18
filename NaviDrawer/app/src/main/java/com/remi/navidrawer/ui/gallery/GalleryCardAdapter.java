@@ -9,14 +9,19 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.R;
+import com.remi.navidrawer.ui.home.HomeCardAdapter;
 
 public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.Itemholder> {
     ArrayList<Cards> userArraylist;
-
+    public interface OnItemClickListener {
+        void onItemClick(View view, int position);
+    }
+    private GalleryCardAdapter.OnItemClickListener mOnItemClickListener;
     public GalleryCardAdapter() {
         this.userArraylist = new ArrayList<Cards>();
     }
@@ -39,6 +44,16 @@ public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.
             mItemHolder.getPic().setImageResource(mCard.getPic());
         }
         mItemHolder.getTextView().setText(mCard.getText());
+        CardView mCardView = (CardView) mItemHolder.getCardView();
+
+        if(mOnItemClickListener != null) {
+            mCardView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mOnItemClickListener.onItemClick(mItemHolder.itemView, mItemHolder.getLayoutPosition());
+                }
+            });
+        }
     }
 
     @Override
@@ -56,20 +71,25 @@ public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.
     public static class Itemholder extends RecyclerView.ViewHolder {
         private final TextView mTextView;
         private final ImageView mPic;
+        private final CardView mCardView;
 
         public Itemholder(View view) {
             super(view);
             mTextView = (TextView) view.findViewById(R.id.filenames);
             mPic = (ImageView) view.findViewById(R.id.thumbnails);
+            mCardView = (CardView) view.findViewById(R.id.galleryCard);
         }
 
         public ImageView getPic() {
             return mPic;
         }
-
         public TextView getTextView() {
             return mTextView;
         }
+        public CardView getCardView() { return mCardView;}
     }
 
+    public void setOnItemClickListener(GalleryCardAdapter.OnItemClickListener mOnItemClickListener) {
+        this.mOnItemClickListener = mOnItemClickListener;
+    }
 }

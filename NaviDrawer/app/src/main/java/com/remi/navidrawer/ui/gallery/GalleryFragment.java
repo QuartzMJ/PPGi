@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.MainActivity;
+import com.remi.navidrawer.R;
 import com.remi.navidrawer.databinding.FragmentGalleryBinding;
 
 import java.util.ArrayList;
@@ -38,6 +40,16 @@ public class GalleryFragment extends Fragment {
         mGalleryCardAdapter = new GalleryCardAdapter();
         mGalleryRecycler.setAdapter(mGalleryCardAdapter);
         mGalleryRecycler.setLayoutManager(new GridLayoutManager(getContext(),4));
+
+        mGalleryCardAdapter.setOnItemClickListener( new GalleryCardAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(View view, int position) {
+               TextView tv = view.findViewById(R.id.filenames);
+               String filename = tv.getText().toString();
+               Log.d("Output filename", filename);
+            }
+        });
+
         galleryViewModel.getGalleryCardLiveData().observe(getViewLifecycleOwner(),galleryCardsUpdateObserver);
 
         return root;

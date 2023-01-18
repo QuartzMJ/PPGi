@@ -1,6 +1,7 @@
 package com.remi.navidrawer.ui.home;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -56,17 +57,16 @@ public class HomeFragment extends Fragment {
             public void onItemClick(View view, int position) {
                 View mView = View.inflate(getContext(), R.layout.detail_page, null);
                 PopupLayout popupLayout = PopupLayout.init(getContext(), mView);
-
-
                 Toolbar appbar = mView.findViewById(R.id.toolbar);
-                appbar.setTitle(mPagesContainerList.get(position).getPageTitle());
-
                 appbar.setNavigationOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        Log.d("Appbar back test", "onClick");
+                        popupLayout.dismiss();
                     }
                 });
+
+
+                appbar.setTitle(mPagesContainerList.get(position).getPageTitle());
 
                 ImageView imageView = (ImageView) mView.findViewById(R.id.detailImage);
                 imageView.setImageResource(mPagesContainerList.get(position).getPagePic());
@@ -175,4 +175,5 @@ public class HomeFragment extends Fragment {
         String link[] = {getString(R.string.ppgi_link1), getString(R.string.ppgi_link1)};
         mPagesContainerList.add(new PagesContainer(R.drawable.green_750x400, "Green Channel", text, additionalText, links));
     }
+
 }

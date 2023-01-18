@@ -33,9 +33,11 @@
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:textAlignment="center"
                 app:navigationIcon="?homeAsUpIndicator"
-                app:layout_collapseMode="pin" />
+                app:layout_collapseMode="pin" >
+
+
+            </androidx.appcompat.widget.Toolbar>
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
