@@ -625,7 +625,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         Log.d("Initial BPM", Integer.toString(BPM));
 
         if (corruptionCount >= 20) {
-            msg += Integer.toString(corruptionCount) + "/150 corrupted samples,the result could be inaccurate!\n";
+            msg += corruptionCount + "/150 corrupted samples,the result could be inaccurate!\n";
         } else {
             if (!isAdapted) {
                 msg += "Applying preset, please wait...";

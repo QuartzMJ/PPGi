@@ -5,7 +5,9 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.remi.navidrawer.Cards;
 
+import com.remi.navidrawer.PagesContainer;
 import com.remi.navidrawer.R;
+import com.remi.navidrawer.ResourceProvider;
 
 import java.util.ArrayList;
 
@@ -14,8 +16,16 @@ public class HomeViewModel extends ViewModel {
     MutableLiveData<ArrayList<Cards>> guideCardLiveData;
     ArrayList<Cards> introCards;
     ArrayList<Cards> guideCards;
+    ResourceProvider mResourceProvider;
 
     public HomeViewModel() {
+        introCardLiveData = new MutableLiveData<>();
+        guideCardLiveData = new MutableLiveData<>();
+        initialize();
+    }
+
+    public HomeViewModel(ResourceProvider resourceProvider) {
+        mResourceProvider = resourceProvider;
         introCardLiveData = new MutableLiveData<>();
         guideCardLiveData = new MutableLiveData<>();
         initialize();
