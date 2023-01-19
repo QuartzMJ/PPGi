@@ -34,12 +34,11 @@ public class GalleryFragment extends Fragment {
         viewBinding = FragmentGalleryBinding.inflate(inflater, container, false);
         View root = viewBinding.getRoot();
 
-        Log.d("OnCreatView Gallery", "onCreateView");
-
         RecyclerView mGalleryRecycler = viewBinding.galleryRecyclerView;
         mGalleryCardAdapter = new GalleryCardAdapter();
         mGalleryRecycler.setAdapter(mGalleryCardAdapter);
         mGalleryRecycler.setLayoutManager(new GridLayoutManager(getContext(),4));
+        mGalleryCardAdapter.setContext(getContext());
 
         mGalleryCardAdapter.setOnItemClickListener( new GalleryCardAdapter.OnItemClickListener() {
             @Override

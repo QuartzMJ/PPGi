@@ -2,11 +2,14 @@ package com.remi.navidrawer;
 
 import android.graphics.Bitmap;
 
+import java.io.File;
+
 public class Cards {
     private String mDescription;
     private int mPic;
     private boolean mIsBitmap = false;
     private Bitmap mBitmap;
+    private File mFile;
 
     public enum cardType {intro, guide,gallery,contact};
     private cardType mType;
@@ -30,6 +33,14 @@ public class Cards {
     public void setPic(Bitmap bitmap) {
         mBitmap = bitmap;
         mIsBitmap = true;
+    }
+
+    public void setFile(File file) {
+        mFile = file;
+    }
+
+    public File getFile(){
+        return mFile;
     }
 
     public boolean getIsBitmap() {

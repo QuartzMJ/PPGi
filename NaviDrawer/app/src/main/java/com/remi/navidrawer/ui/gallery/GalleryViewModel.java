@@ -52,23 +52,7 @@ public class GalleryViewModel extends ViewModel {
                 Cards card = new Cards();
                 card.setText(file.getName());
                 card.setType(Cards.cardType.gallery);
-
-                String picName = file.getAbsolutePath().substring(0, file.getAbsolutePath().length() - 4) + ".jpg";
-                File picFile = new File(picName);
-                Bitmap bitmap;
-                if (!picFile.exists()) {
-                    bitmap = ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MICRO_KIND);
-                    OutputStream stream;
-                    stream = new FileOutputStream(picFile);
-                    bitmap.compress(Bitmap.CompressFormat.JPEG,100,stream);
-                    stream.flush();
-                    stream.close();
-                }else{
-                     bitmap = BitmapFactory.decodeFile(picFile.getAbsolutePath());
-                }
-
-                card.setPic(bitmap);
-
+                card.setFile(file);
                 galleryCards.add(card);
             }
         }

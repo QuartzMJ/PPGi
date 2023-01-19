@@ -1,23 +1,35 @@
 package com.remi.navidrawer.ui.gallery;
 
+import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.ThumbnailUtils;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
-
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.R;
-import com.remi.navidrawer.ui.home.HomeCardAdapter;
+
 
 public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.Itemholder> {
     ArrayList<Cards> userArraylist;
+    Context mContext;
     public interface OnItemClickListener {
         void onItemClick(View view, int position);
     }
@@ -38,11 +50,45 @@ public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.
     public void onBindViewHolder(@NonNull Itemholder holder, int position) {
         Cards mCard = userArraylist.get(position);
         Itemholder mItemHolder = (Itemholder) holder;
-        if (mCard.getIsBitmap() == true) {
-            mItemHolder.getPic().setImageBitmap(mCard.getBitmap());
-        } else {
-            mItemHolder.getPic().setImageResource(mCard.getPic());
+
+        File file = mCard.getFile();
+        File sd = mContext.getCacheDir();
+        File folder = new File(sd, "/thumbnails/");
+        if (!folder.exists()) {
+            if (!folder.mkdir()) {
+                Log.e("ERROR", "Cannot create a directory!");
+            } else {
+                folder.mkdirs();
+            }
         }
+        String picName = mContext.getCacheDir().getAbsolutePath()+ "/thumbnails" +'/' +file.getName().substring(0,file.getName().length()-4) + ".jpg";
+
+        File picFile = new File(picName);
+        Bitmap bitmap;
+        if (!picFile.exists()) {
+            bitmap = ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MICRO_KIND);
+            OutputStream stream = null;
+            try {
+                stream = new FileOutputStream(picFile);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            bitmap.compress(Bitmap.CompressFormat.JPEG,100,stream);
+            try {
+                stream.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                stream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else{
+            bitmap = BitmapFactory.decodeFile(picFile.getAbsolutePath());
+            Log.d("pics founded", picFile.getAbsolutePath());
+        }
+        mItemHolder.getPic().setImageBitmap( bitmap);
         mItemHolder.getTextView().setText(mCard.getText());
         CardView mCardView = (CardView) mItemHolder.getCardView();
 
@@ -91,5 +137,9 @@ public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.
 
     public void setOnItemClickListener(GalleryCardAdapter.OnItemClickListener mOnItemClickListener) {
         this.mOnItemClickListener = mOnItemClickListener;
+    }
+
+    public void setContext(Context context) {
+        mContext = context;
     }
 }
