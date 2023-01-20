@@ -1,6 +1,8 @@
 package com.remi.navidrawer.ui.contact;
 
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,8 +15,10 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.MainActivity;
+import com.remi.navidrawer.R;
 import com.remi.navidrawer.databinding.FragmentContactBinding;
 
 import java.util.ArrayList;
@@ -30,6 +34,24 @@ public class ContactFragment extends Fragment {
                 new ViewModelProvider(this).get(ContactViewModel.class);
         binding = FragmentContactBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+
+        FloatingActionButton fab = (FloatingActionButton) root.findViewById(R.id.contactFab);
+
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent selectorIntent = new Intent(Intent.ACTION_SENDTO);
+                selectorIntent.setData(Uri.parse("mailto:"));
+
+                final Intent emailIntent = new Intent(Intent.ACTION_SEND);
+                emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"mengjun.zeng@rwth-aachen.de"});
+                emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Report to PPG imaging app");
+                emailIntent.putExtra(Intent.EXTRA_TEXT, "Hello, Mr Zeng...");
+                emailIntent.setSelector( selectorIntent );
+
+                getActivity().startActivity(Intent.createChooser(emailIntent, "Send email..."));
+            }
+        });
 
         RecyclerView contactRecyclerView = binding.contactRecyclerView;
         mContactCardAdapter = new ContactCardAdapter();
@@ -58,7 +80,6 @@ public class ContactFragment extends Fragment {
     @Override
     public void onResume(){
         super.onResume();
-        /*((MainActivity) getActivity()).getFloatingActionButton().show();*/
         ((MainActivity) getActivity()).getSupportActionBar().hide();
     }
 }
