@@ -49,6 +49,16 @@ public class HomeFragment extends Fragment {
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        FloatingActionButton fab = (FloatingActionButton) root.findViewById(R.id.homeFab);
+        fab.setImageResource(R.drawable.ic_heartrate_analyze);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(getContext(), Runtime_measureactivity.class);
+                startActivity(intent);
+            }
+        });
+
         populate();
         RecyclerView introRecyclerView = binding.introCards;
         mHomeCardAdapter = new HomeCardAdapter();
@@ -153,7 +163,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        ((MainActivity) getActivity()).getFloatingActionButton().show();
+        /*((MainActivity) getActivity()).getFloatingActionButton().show();*/
         ((MainActivity) getActivity()).getSupportActionBar().show();
     }
 

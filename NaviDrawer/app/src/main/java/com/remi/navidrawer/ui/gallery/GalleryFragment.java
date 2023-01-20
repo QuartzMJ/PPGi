@@ -70,6 +70,6 @@ public class GalleryFragment extends Fragment {
     public void onResume(){
         super.onResume();
         ((MainActivity) getActivity()).getSupportActionBar().hide();
-        ((MainActivity) getActivity()).getFloatingActionButton().hide();
+        /*((MainActivity) getActivity()).getFloatingActionButton().hide();*/
     }
 }

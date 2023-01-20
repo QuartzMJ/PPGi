@@ -39,6 +39,6 @@ public class SlideshowFragment extends Fragment {
     @Override
     public void onResume(){
         super.onResume();
-        ((MainActivity) getActivity()).getFloatingActionButton().show();
+        /*((MainActivity) getActivity()).getFloatingActionButton().show();*/
     }
 }

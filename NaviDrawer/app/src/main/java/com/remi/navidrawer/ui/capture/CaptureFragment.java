@@ -56,8 +56,8 @@ public class CaptureFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-         ((MainActivity) getActivity()).getFloatingActionButton().hide();
-        getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        /* ((MainActivity) getActivity()).getFloatingActionButton().hide();
+        getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);*/
         CaptureViewModel captureViewModel =
                 new ViewModelProvider(this).get(CaptureViewModel.class);
 
@@ -194,12 +194,12 @@ public class CaptureFragment extends Fragment {
     @Override
     public void  onDetach(){
         super.onDetach();
-        requireActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+       /* requireActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);*/
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        ((MainActivity) getActivity()).getSupportActionBar().hide();
+       /* ((MainActivity) getActivity()).getSupportActionBar().hide();*/
     }
 }

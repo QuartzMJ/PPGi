@@ -45,14 +45,6 @@ public class MainActivity extends AppCompatActivity {
                 = new ColorDrawable(Color.parseColor("#4d98e9"));
         actionBar.setBackgroundDrawable(colorDrawable);
 
-      /*  binding.appBarMain.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Runtime_measureactivity.class);
-                startActivity(intent);
-            }
-        });*/
-
         DrawerLayout drawer = binding.drawerLayout;
         NavigationView navigationView = binding.navView;
         // Passing each menu ID as a set of Ids because each
@@ -106,9 +98,9 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    public FloatingActionButton getFloatingActionButton() {
+/*    public FloatingActionButton getFloatingActionButton() {
        return binding.appBarMain.fab;
-    }
+    }*/
 
     @Override
     public boolean onSupportNavigateUp() {

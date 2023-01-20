@@ -1,60 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".ui.home.HomeFragment"
-    android:layout_height="match_parent"
-    android:layout_width="match_parent">
-<androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".ui.home.HomeFragment">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
 
-   <TextView
-       android:id="@+id/tv_intro"
-       android:textSize="25sp"
-       android:textColor="@color/light_blue_900"
-       android:textAlignment="center"
-       android:layout_width="match_parent"
-       android:layout_height="wrap_content"
-      android:text="Introduction"
-      android:layout_marginTop="40dp"
-       android:layout_marginBottom="10dp"
-       app:layout_constraintTop_toTopOf="parent"
-       android:elevation="2dp"
-     />
+            <TextView
+                android:id="@+id/tv_intro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:layout_marginBottom="10dp"
+                android:elevation="2dp"
+                android:text="Introduction"
+                android:textAlignment="center"
+                android:textColor="@color/light_blue_900"
+                android:textSize="25sp"
+                app:layout_constraintTop_toTopOf="parent" />
 
 
-   <androidx.recyclerview.widget.RecyclerView
-       android:id="@+id/introCards"
-       android:layout_width="match_parent"
-       android:layout_height="wrap_content"
-       app:layout_constraintTop_toBottomOf="@id/tv_intro"
-       android:clipToPadding="false"
-       android:paddingBottom="20dp"
-       android:elevation="2dp"
-       />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/introCards"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:elevation="2dp"
+                android:paddingBottom="20dp"
+                app:layout_constraintTop_toBottomOf="@id/tv_intro" />
 
-   <TextView
-       android:id="@+id/tv_userguide"
-       android:layout_width="match_parent"
-       android:layout_height="wrap_content"
-       android:textSize="25sp"
-       android:textColor="@color/light_blue_900"
-       android:textAlignment="center"
-       android:text="Userguide"
-       android:layout_margin="20dp"
-       app:layout_constraintTop_toBottomOf="@+id/introCards"
-       />
+            <TextView
+                android:id="@+id/tv_userguide"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="20dp"
+                android:text="Userguide"
+                android:textAlignment="center"
+                android:textColor="@color/light_blue_900"
+                android:textSize="25sp"
+                app:layout_constraintTop_toBottomOf="@+id/introCards" />
 
-   <androidx.recyclerview.widget.RecyclerView
-       android:id="@+id/userGuideCards"
-       android:layout_width="match_parent"
-       android:layout_height="wrap_content"
-       app:layout_constraintTop_toBottomOf="@id/tv_userguide"
-       android:clipToPadding="false"
-       android:paddingBottom="20dp"
-       />
-</androidx.constraintlayout.widget.ConstraintLayout>
-</androidx.core.widget.NestedScrollView>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/userGuideCards"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:paddingBottom="20dp"
+                app:layout_constraintTop_toBottomOf="@id/tv_userguide" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/homeFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="@dimen/fab_margin"
+        android:layout_marginBottom="16dp"
+        android:background="@color/ic_website_background"
+        android:src="@drawable/ic_phone_foreground" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
