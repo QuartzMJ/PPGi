@@ -9,17 +9,23 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.R;
+import com.remi.navidrawer.ui.home.HomeCardAdapter;
 
 public class ContactCardAdapter extends RecyclerView.Adapter<ContactCardAdapter.Itemholder> {
     ArrayList<ContactCards> userArraylist;
-
     public ContactCardAdapter() {
         this.userArraylist = new ArrayList<ContactCards>();
     }
+
+    public interface OnItemClickListener {
+        void onItemClick(View view, int position);
+    }
+    private HomeCardAdapter.OnItemClickListener mOnItemClickListener;
 
     @NonNull
     @Override
@@ -41,6 +47,15 @@ public class ContactCardAdapter extends RecyclerView.Adapter<ContactCardAdapter.
         mItemHolder.getTextView().setText(mContactCard.getText());
         mItemHolder.getTextView2().setText(mContactCard.getText2());
         mItemHolder.getTextView3().setText(mContactCard.getText3());
+        CardView mCardView = mItemHolder.getCardView();
+        if(mOnItemClickListener != null) {
+            mCardView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mOnItemClickListener.onItemClick(mItemHolder.itemView, mItemHolder.getLayoutPosition());
+                }
+            });
+        }
     }
 
     @Override
@@ -60,6 +75,7 @@ public class ContactCardAdapter extends RecyclerView.Adapter<ContactCardAdapter.
         private final TextView mTextView2;
         private final TextView mTextView3;
         private final ImageView mPic;
+        private final CardView mCardView;
 
         public Itemholder(View view) {
             super(view);
@@ -67,6 +83,7 @@ public class ContactCardAdapter extends RecyclerView.Adapter<ContactCardAdapter.
             mTextView2 = (TextView) view.findViewById(R.id.contactText2);
             mTextView3 = (TextView) view.findViewById(R.id.contactText3);
             mPic = (ImageView) view.findViewById(R.id.contactImage);
+            mCardView = (CardView) view.findViewById(R.id.contactCard);
         }
 
         public ImageView getPic() {
@@ -84,6 +101,11 @@ public class ContactCardAdapter extends RecyclerView.Adapter<ContactCardAdapter.
         public TextView getTextView3() {
             return mTextView3;
         }
+
+        public CardView getCardView() {return mCardView;}
     }
 
+    public void setOnItemClickListener(HomeCardAdapter.OnItemClickListener mOnItemClickListener) {
+        this.mOnItemClickListener = mOnItemClickListener;
+    }
 }
