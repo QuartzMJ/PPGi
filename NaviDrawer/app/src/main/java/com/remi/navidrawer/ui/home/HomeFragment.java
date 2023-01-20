@@ -21,10 +21,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.codingending.popuplayout.PopupLayout;
 import androidx.appcompat.widget.Toolbar;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.MainActivity;
 import com.remi.navidrawer.PagesContainer;
 import com.remi.navidrawer.R;
+import com.remi.navidrawer.Runtime_measureactivity;
+import com.remi.navidrawer.databinding.ActivityMainBinding;
 import com.remi.navidrawer.databinding.FragmentHomeBinding;
 
 import java.util.ArrayList;
@@ -44,8 +48,8 @@ public class HomeFragment extends Fragment {
                 new ViewModelProvider(this).get(HomeViewModel.class);
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        populate();
 
+        populate();
         RecyclerView introRecyclerView = binding.introCards;
         mHomeCardAdapter = new HomeCardAdapter();
         introRecyclerView.setAdapter(mHomeCardAdapter);
@@ -150,6 +154,7 @@ public class HomeFragment extends Fragment {
     public void onResume() {
         super.onResume();
         ((MainActivity) getActivity()).getFloatingActionButton().show();
+        ((MainActivity) getActivity()).getSupportActionBar().show();
     }
 
     public void populate() {

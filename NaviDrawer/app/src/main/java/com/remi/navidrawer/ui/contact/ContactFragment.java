@@ -31,7 +31,6 @@ public class ContactFragment extends Fragment {
         binding = FragmentContactBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-
         RecyclerView contactRecyclerView = binding.contactRecyclerView;
         mContactCardAdapter = new ContactCardAdapter();
         contactRecyclerView.setAdapter(mContactCardAdapter);
@@ -60,5 +59,6 @@ public class ContactFragment extends Fragment {
     public void onResume(){
         super.onResume();
         ((MainActivity) getActivity()).getFloatingActionButton().show();
+        ((MainActivity) getActivity()).getSupportActionBar().hide();
     }
 }

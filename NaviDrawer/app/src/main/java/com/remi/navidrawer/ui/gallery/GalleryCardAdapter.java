@@ -1,7 +1,5 @@
 package com.remi.navidrawer.ui.gallery;
 
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -52,8 +50,8 @@ public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.
         Itemholder mItemHolder = (Itemholder) holder;
 
         File file = mCard.getFile();
-        File sd = mContext.getCacheDir();
-        File folder = new File(sd, "/thumbnails/");
+        File thumbnailsFolder = mContext.getCacheDir();
+        File folder = new File(thumbnailsFolder, "/thumbnails/");
         if (!folder.exists()) {
             if (!folder.mkdir()) {
                 Log.e("ERROR", "Cannot create a directory!");
@@ -61,9 +59,9 @@ public class GalleryCardAdapter extends RecyclerView.Adapter<GalleryCardAdapter.
                 folder.mkdirs();
             }
         }
-        String picName = mContext.getCacheDir().getAbsolutePath()+ "/thumbnails" +'/' +file.getName().substring(0,file.getName().length()-4) + ".jpg";
+        String picPath = mContext.getCacheDir().getAbsolutePath()+ "/thumbnails" +'/' +file.getName().substring(0,file.getName().length()-4) + ".jpg";
 
-        File picFile = new File(picName);
+        File picFile = new File(picPath);
         Bitmap bitmap;
         if (!picFile.exists()) {
             bitmap = ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MICRO_KIND);

@@ -10,11 +10,13 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Menu;
 
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.remi.navidrawer.databinding.ActivityMainBinding;
 
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.navigation.NavController;
@@ -43,13 +45,13 @@ public class MainActivity extends AppCompatActivity {
                 = new ColorDrawable(Color.parseColor("#4d98e9"));
         actionBar.setBackgroundDrawable(colorDrawable);
 
-        binding.appBarMain.startRuntimeImageProcessing.setOnClickListener(new View.OnClickListener() {
+      /*  binding.appBarMain.fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, Runtime_measureactivity.class);
                 startActivity(intent);
             }
-        });
+        });*/
 
         DrawerLayout drawer = binding.drawerLayout;
         NavigationView navigationView = binding.navView;
@@ -105,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public FloatingActionButton getFloatingActionButton() {
-        return binding.appBarMain.startRuntimeImageProcessing;
+       return binding.appBarMain.fab;
     }
 
     @Override

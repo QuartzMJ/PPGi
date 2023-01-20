@@ -33,7 +33,6 @@ public class GalleryFragment extends Fragment {
                 new ViewModelProvider(this).get(GalleryViewModel.class);
         viewBinding = FragmentGalleryBinding.inflate(inflater, container, false);
         View root = viewBinding.getRoot();
-
         RecyclerView mGalleryRecycler = viewBinding.galleryRecyclerView;
         mGalleryCardAdapter = new GalleryCardAdapter();
         mGalleryRecycler.setAdapter(mGalleryCardAdapter);
@@ -70,6 +69,7 @@ public class GalleryFragment extends Fragment {
     @Override
     public void onResume(){
         super.onResume();
-        ((MainActivity) getActivity()).getFloatingActionButton().show();
+        ((MainActivity) getActivity()).getSupportActionBar().hide();
+        ((MainActivity) getActivity()).getFloatingActionButton().hide();
     }
 }
