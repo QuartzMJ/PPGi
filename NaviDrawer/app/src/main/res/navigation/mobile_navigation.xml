@@ -26,7 +26,7 @@
     <fragment
         android:id="@+id/nav_ecg"
         android:name="com.remi.navidrawer.ui.ecg.EcgFragment"
-        android:label="ECG"
+        android:label="ECG Display"
         tools:layout="@layout/fragment_ecg" />
 
     <fragment
