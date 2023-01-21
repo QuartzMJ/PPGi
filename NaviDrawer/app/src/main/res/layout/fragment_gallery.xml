@@ -44,8 +44,7 @@
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="@dimen/fab_margin"
         android:layout_marginBottom="16dp"
-        android:background="@color/ic_website_background"
-        android:src="@drawable/ic_phone_foreground"/>
+       />
 
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,5 +1,6 @@
 package com.remi.navidrawer.ui.gallery;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -8,12 +9,14 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.remi.navidrawer.Cards;
 import com.remi.navidrawer.MainActivity;
 import com.remi.navidrawer.R;
@@ -26,6 +29,7 @@ public class GalleryFragment extends Fragment {
     private FragmentGalleryBinding viewBinding;
     private GalleryCardAdapter mGalleryCardAdapter;
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
 
@@ -36,19 +40,24 @@ public class GalleryFragment extends Fragment {
         RecyclerView mGalleryRecycler = viewBinding.galleryRecyclerView;
         mGalleryCardAdapter = new GalleryCardAdapter();
         mGalleryRecycler.setAdapter(mGalleryCardAdapter);
-        mGalleryRecycler.setLayoutManager(new GridLayoutManager(getContext(),4));
+        mGalleryRecycler.setLayoutManager(new GridLayoutManager(getContext(), 4));
         mGalleryCardAdapter.setContext(getContext());
 
-        mGalleryCardAdapter.setOnItemClickListener( new GalleryCardAdapter.OnItemClickListener() {
+        FloatingActionButton fab = (FloatingActionButton) root.findViewById(R.id.galleryFab);
+        fab.setImageResource(R.drawable.ic_offline_measure_foreground);
+        fab.setBackgroundTintList(getResources().getColorStateList(R.color.ic_offline_measure_background));
+        fab.setForegroundTintList(getResources().getColorStateList(R.color.galleryFab_color));
+
+        mGalleryCardAdapter.setOnItemClickListener(new GalleryCardAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-               TextView tv = view.findViewById(R.id.filenames);
-               String filename = tv.getText().toString();
-               Log.d("Output filename", filename);
+                TextView tv = view.findViewById(R.id.filenames);
+                String filename = tv.getText().toString();
+                Log.d("Output filename", filename);
             }
         });
 
-        galleryViewModel.getGalleryCardLiveData().observe(getViewLifecycleOwner(),galleryCardsUpdateObserver);
+        galleryViewModel.getGalleryCardLiveData().observe(getViewLifecycleOwner(), galleryCardsUpdateObserver);
 
         return root;
     }
@@ -67,9 +76,8 @@ public class GalleryFragment extends Fragment {
     }
 
     @Override
-    public void onResume(){
+    public void onResume() {
         super.onResume();
         ((MainActivity) getActivity()).getSupportActionBar().hide();
-        /*((MainActivity) getActivity()).getFloatingActionButton().hide();*/
     }
 }

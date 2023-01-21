@@ -6,6 +6,7 @@ import android.media.ThumbnailUtils;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.Toast;
 
 
 import androidx.lifecycle.LiveData;
@@ -47,6 +48,7 @@ public class GalleryViewModel extends ViewModel {
         File dir = new File(path);
         File[] files = dir.listFiles();
 
+        try{
         for (File file : files) {
             if (ifVideo(file.getName()) == true) {
                 Cards card = new Cards();
@@ -54,6 +56,12 @@ public class GalleryViewModel extends ViewModel {
                 card.setType(Cards.cardType.gallery);
                 card.setFile(file);
                 galleryCards.add(card);
+            }
+        }
+        }
+        catch (Exception e){
+            if(e instanceof java.lang.NullPointerException){
+               Log.d("Files Error","No files found");
             }
         }
     }

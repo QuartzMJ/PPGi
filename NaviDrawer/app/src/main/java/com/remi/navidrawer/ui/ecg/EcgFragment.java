@@ -1,4 +1,4 @@
-package com.remi.navidrawer.ui.slideshow;
+package com.remi.navidrawer.ui.ecg;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,23 +10,22 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.remi.navidrawer.MainActivity;
-import com.remi.navidrawer.databinding.FragmentSlideshowBinding;
+import com.remi.navidrawer.databinding.FragmentEcgBinding;
 
-public class SlideshowFragment extends Fragment {
+public class EcgFragment extends Fragment {
 
-    private FragmentSlideshowBinding binding;
+    private FragmentEcgBinding binding;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        SlideshowViewModel slideshowViewModel =
-                new ViewModelProvider(this).get(SlideshowViewModel.class);
+        EcgViewModel ecgViewModel =
+                new ViewModelProvider(this).get(EcgViewModel.class);
 
-        binding = FragmentSlideshowBinding.inflate(inflater, container, false);
+        binding = FragmentEcgBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
         final TextView textView = binding.textSlideshow;
-        slideshowViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
+        ecgViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
         return root;
     }
 

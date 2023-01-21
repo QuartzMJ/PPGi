@@ -1,8 +1,5 @@
 package com.remi.navidrawer.ui.contact;
 
-
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
