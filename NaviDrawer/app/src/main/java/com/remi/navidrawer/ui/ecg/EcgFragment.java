@@ -72,7 +72,11 @@ public class EcgFragment extends Fragment {
                     }
                 } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    Log.d("Bluetooth device found", device.getName().toString());
+                    if(device != null) {
+                        Log.d("Bluetooth device found", device.getName().toString());
+                    }else {
+                        Toast.makeText(getContext(), "Device is null pointer", Toast.LENGTH_LONG).show();
+                    }
                 }
             }else{
                 String action = intent.getAction();
@@ -95,6 +99,11 @@ public class EcgFragment extends Fragment {
                 } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     Log.d("Magical Bluetooth","I am here ");
+                    if(device != null) {
+                        Log.d("Bluetooth device found",device.getAddress().toString());
+                    }else {
+                        Toast.makeText(getContext(), "Device is null pointer", Toast.LENGTH_LONG).show();
+                    }
                 }
             }
         }
