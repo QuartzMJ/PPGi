@@ -15,6 +15,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -32,6 +33,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.remi.navidrawer.databinding.FragmentEcgBinding;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class EcgFragment extends Fragment {
@@ -41,26 +44,57 @@ public class EcgFragment extends Fragment {
     private int REQUEST_ENABLE_BT = 1;
     private int BLUETOOTH_ENABLE_SUCCESS = -1;
     private EcgViewModel ecgViewModel;
-
+    private BluetoothAdapter mBluetoothAdapter;
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-                switch (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
-                    case BluetoothAdapter.STATE_ON:
-                        Toast.makeText(getContext(), "BluetoothAdapter.STATE_ON", Toast.LENGTH_SHORT).show();
-                        break;
-                    case BluetoothAdapter.STATE_OFF:
-                        Toast.makeText(getContext(), "BluetoothAdapter.STATE_OFF", Toast.LENGTH_SHORT).show();
-                        break;
-                    case BluetoothAdapter.STATE_TURNING_ON:
-                        Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_ON", Toast.LENGTH_SHORT).show();
-                        break;
-                    case BluetoothAdapter.STATE_TURNING_OFF:
-                        Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_OFF", Toast.LENGTH_SHORT).show();
-                        break;
-                    default:
+            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                        getActivity(),
+                        new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1
+                );
+                String action = intent.getAction();
+                if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                    switch (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
+                        case BluetoothAdapter.STATE_ON:
+                            Toast.makeText(getContext(), action, Toast.LENGTH_LONG).show();
+                            break;
+                        case BluetoothAdapter.STATE_OFF:
+                            Toast.makeText(getContext(), action, Toast.LENGTH_LONG).show();
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_ON:
+                            Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_ON", Toast.LENGTH_LONG).show();
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                            Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_OFF", Toast.LENGTH_LONG).show();
+                            break;
+                        default:
+                    }
+                } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    Log.d("Bluetooth device found", device.getName().toString());
+                }
+            }else{
+                String action = intent.getAction();
+                if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                    switch (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
+                        case BluetoothAdapter.STATE_ON:
+                            Toast.makeText(getContext(), action, Toast.LENGTH_LONG).show();
+                            break;
+                        case BluetoothAdapter.STATE_OFF:
+                            Toast.makeText(getContext(), action, Toast.LENGTH_LONG).show();
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_ON:
+                            Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_ON", Toast.LENGTH_LONG).show();
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                            Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_OFF", Toast.LENGTH_LONG).show();
+                            break;
+                        default:
+                    }
+                } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    Log.d("Magical Bluetooth","I am here ");
                 }
             }
         }
@@ -68,7 +102,6 @@ public class EcgFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        Log.d("I am inside", "Here");
         ecgViewModel =
                 new ViewModelProvider(this).get(EcgViewModel.class);
         binding = FragmentEcgBinding.inflate(inflater, container, false);
@@ -76,8 +109,10 @@ public class EcgFragment extends Fragment {
         final TextView textView = binding.textEcg;
         ecgViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
 
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         initBluetooth();
         scanBluetoothDevice();
+
         return root;
     }
 
@@ -95,7 +130,6 @@ public class EcgFragment extends Fragment {
     }
 
     public void initBluetooth() {
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
             ecgViewModel.setText("There is no Bluetooth adapter on your device");
         } else {
@@ -125,13 +159,34 @@ public class EcgFragment extends Fragment {
 
     public void scanBluetoothDevice() {
 
-        mIntentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        mIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-        getActivity().registerReceiver(mReceiver, mIntentFilter);
-        Intent discoverableIntent =
-                new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-        startActivity(discoverableIntent);
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    getActivity(),
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1
+            );
+            Intent discoverableIntent =
+                    new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+            startActivity(discoverableIntent);
+
+            mIntentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            mIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+            mIntentFilter.addAction(BluetoothDevice.ACTION_FOUND);
+            getActivity().registerReceiver(mReceiver, mIntentFilter);
+            mBluetoothAdapter.startDiscovery();
+        } else {
+            Intent discoverableIntent =
+                    new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+            startActivity(discoverableIntent);
+
+            mIntentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            mIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+            mIntentFilter.addAction(BluetoothDevice.ACTION_FOUND);
+            getActivity().registerReceiver(mReceiver, mIntentFilter);
+            mBluetoothAdapter.startDiscovery();
+        }
+
     }
 
 
@@ -151,5 +206,4 @@ public class EcgFragment extends Fragment {
             default:
         }
     }
-
 }

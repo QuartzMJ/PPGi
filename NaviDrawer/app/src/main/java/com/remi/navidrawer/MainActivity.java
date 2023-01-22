@@ -26,10 +26,14 @@ import androidx.navigation.ui.NavigationUI;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainBinding binding;
+    private List<String> mPermissionList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
+        initPermission();
         setSupportActionBar(binding.appBarMain.toolbar);
         ActionBar actionBar;
         actionBar = getSupportActionBar();
@@ -107,5 +111,23 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+    private void initPermission(){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+            // Android 版本大于等于 Android12 时
+            // 只包括蓝牙这部分的权限，其余的需要什么权限自己添加
+            mPermissionList.add(Manifest.permission.BLUETOOTH_SCAN);
+            mPermissionList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
+            mPermissionList.add(Manifest.permission.BLUETOOTH_CONNECT);
+        } else {
+            // Android 版本小于 Android12 及以下版本
+            mPermissionList.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+            mPermissionList.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+
+        if(mPermissionList.size() > 0){
+            ActivityCompat.requestPermissions(this,mPermissionList.toArray(new String[0]),1001);
+        }
     }
 }
