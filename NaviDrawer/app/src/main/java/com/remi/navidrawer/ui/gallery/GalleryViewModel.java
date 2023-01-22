@@ -1,25 +1,14 @@
 package com.remi.navidrawer.ui.gallery;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.ThumbnailUtils;
+
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.util.Log;
-import android.widget.Toast;
-
-
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import com.remi.navidrawer.Cards;
-
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 
 public class GalleryViewModel extends ViewModel {

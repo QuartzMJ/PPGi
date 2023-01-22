@@ -36,12 +36,17 @@ public class GalleryFragment extends Fragment {
         GalleryViewModel galleryViewModel =
                 new ViewModelProvider(this).get(GalleryViewModel.class);
         viewBinding = FragmentGalleryBinding.inflate(inflater, container, false);
+        ((MainActivity) getActivity()).getSupportActionBar().hide();
         View root = viewBinding.getRoot();
+
+
         RecyclerView mGalleryRecycler = viewBinding.galleryRecyclerView;
         mGalleryCardAdapter = new GalleryCardAdapter();
         mGalleryRecycler.setAdapter(mGalleryCardAdapter);
         mGalleryRecycler.setLayoutManager(new GridLayoutManager(getContext(), 4));
         mGalleryCardAdapter.setContext(getContext());
+
+
 
         FloatingActionButton fab = (FloatingActionButton) root.findViewById(R.id.galleryFab);
         fab.setImageResource(R.drawable.ic_offline_measure_foreground);
@@ -78,6 +83,6 @@ public class GalleryFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        ((MainActivity) getActivity()).getSupportActionBar().hide();
+
     }
 }

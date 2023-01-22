@@ -1,21 +1,14 @@
 package com.remi.navidrawer.ui.ecg;
 
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
 import android.Manifest;
-import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothHeadset;
-import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanResult;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,17 +17,20 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.remi.navidrawer.Cards;
+import com.remi.navidrawer.MainActivity;
 import com.remi.navidrawer.databinding.FragmentEcgBinding;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class EcgFragment extends Fragment {
@@ -44,7 +40,9 @@ public class EcgFragment extends Fragment {
     private int REQUEST_ENABLE_BT = 1;
     private int BLUETOOTH_ENABLE_SUCCESS = -1;
     private EcgViewModel ecgViewModel;
+    private EcgCardAdapter mAdapter;
     private BluetoothAdapter mBluetoothAdapter;
+    private ArrayList<DetectedDevice> mDetectedDevices = new ArrayList<>();
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -53,6 +51,7 @@ public class EcgFragment extends Fragment {
                         getActivity(),
                         new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1
                 );
+            } else {
                 String action = intent.getAction();
                 if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
                     switch (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
@@ -72,37 +71,33 @@ public class EcgFragment extends Fragment {
                     }
                 } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    if(device != null) {
-                        Log.d("Bluetooth device found", device.getName().toString());
-                    }else {
-                        Toast.makeText(getContext(), "Device is null pointer", Toast.LENGTH_LONG).show();
+                    DetectedDevice mDetectedDevice = new DetectedDevice();
+                    String deviceClass ="";
+                    BluetoothClass btClass = device.getBluetoothClass();
+
+                    if(btClass.getDeviceClass() == BluetoothClass.Device.COMPUTER_DESKTOP){
+                        deviceClass += "Desktop";
+                    }else if(btClass.getDeviceClass() == BluetoothClass.Device.PHONE_SMART){
+                        deviceClass += "Phone";
+                    }else if(btClass.getDeviceClass() == BluetoothClass.Device.COMPUTER_LAPTOP){
+                        deviceClass += "Laptop";
+                    }else{
+                        deviceClass += "Others";
                     }
-                }
-            }else{
-                String action = intent.getAction();
-                if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-                    switch (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
-                        case BluetoothAdapter.STATE_ON:
-                            Toast.makeText(getContext(), action, Toast.LENGTH_LONG).show();
-                            break;
-                        case BluetoothAdapter.STATE_OFF:
-                            Toast.makeText(getContext(), action, Toast.LENGTH_LONG).show();
-                            break;
-                        case BluetoothAdapter.STATE_TURNING_ON:
-                            Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_ON", Toast.LENGTH_LONG).show();
-                            break;
-                        case BluetoothAdapter.STATE_TURNING_OFF:
-                            Toast.makeText(getContext(), "BluetoothAdapter.STATE_TURNING_OFF", Toast.LENGTH_LONG).show();
-                            break;
-                        default:
-                    }
-                } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    Log.d("Magical Bluetooth","I am here ");
-                    if(device != null) {
-                        Log.d("Bluetooth device found",device.getAddress().toString());
-                    }else {
-                        Toast.makeText(getContext(), "Device is null pointer", Toast.LENGTH_LONG).show();
+
+
+                    if (device != null) {
+                        Log.d("Bluetooth device found", device.getAddress().toString() + " Class: " + deviceClass );
+                        mDetectedDevice.setDeviceAddress(device.getAddress());
+                        if (device.getName() != null) {
+                            Log.d("Bluetooth device found", device.getName().toString() + " Class: " + deviceClass);
+                            mDetectedDevice.setDeviceName(device.getName());
+                        }
+                        mDetectedDevice.setDeviceType(device.getType());
+                        mDetectedDevice.setDeviceBluetoothClass(device.getBluetoothClass());
+                        mDetectedDevices.add(mDetectedDevice);
+                        ecgViewModel.updateCards(mDetectedDevices);
+                        ecgViewModel.getLiveEcgCards().observe(getViewLifecycleOwner(), updateObserver);
                     }
                 }
             }
@@ -115,15 +110,46 @@ public class EcgFragment extends Fragment {
                 new ViewModelProvider(this).get(EcgViewModel.class);
         binding = FragmentEcgBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        final TextView textView = binding.textEcg;
-        ecgViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
-
+        ((MainActivity) getActivity()).getSupportActionBar().hide();
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        TextView setDiscoverable = binding.startDiscover;
+
+        setDiscoverable.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setDiscoverable();
+            }
+        });
+
+
+        TextView refresh = binding.refreshList;
+        refresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                scanBluetoothDevice();
+            }
+        });
+
+        RecyclerView mRecyclerView = binding.ecgRecyclerView;
+        mAdapter = new EcgCardAdapter();
+        mRecyclerView.setAdapter(mAdapter);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
+
         initBluetooth();
+        setDiscoverable();
         scanBluetoothDevice();
+
 
         return root;
     }
+
+    Observer<ArrayList<EcgCards>> updateObserver = new Observer<ArrayList<EcgCards>>() {
+        @Override
+        public void onChanged(ArrayList<EcgCards> ecgCards) {
+            mAdapter.updateEcgCardList(ecgCards);
+        }
+    };
 
     @Override
     public void onDestroyView() {
@@ -139,12 +165,6 @@ public class EcgFragment extends Fragment {
     }
 
     public void initBluetooth() {
-        if (mBluetoothAdapter == null) {
-            ecgViewModel.setText("There is no Bluetooth adapter on your device");
-        } else {
-            ecgViewModel.setText("Bluetooth adapter is available!");
-        }
-
         if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
@@ -155,17 +175,26 @@ public class EcgFragment extends Fragment {
                     getActivity(),
                     new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1
             );
-        }
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        if (pairedDevices.size() > 0) {
-            // There are paired devices. Get the name and address of each paired device.
-            for (BluetoothDevice device : pairedDevices) {
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress(); // MAC address
+        } else {
+            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+            if (pairedDevices.size() > 0) {
+                // There are paired devices. Get the name and address of each paired device.
+                for (BluetoothDevice device : pairedDevices) {
+                    String deviceName = device.getName();
+                    String deviceHardwareAddress = device.getAddress(); // MAC address
+                    Log.d("Paired device ", deviceName + " with " + deviceHardwareAddress);
+                }
             }
         }
     }
 
+    public void setDiscoverable() {
+        Intent discoverableIntent =
+                new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+        startActivity(discoverableIntent);
+
+}
     public void scanBluetoothDevice() {
 
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -173,22 +202,8 @@ public class EcgFragment extends Fragment {
                     getActivity(),
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1
             );
-            Intent discoverableIntent =
-                    new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-            startActivity(discoverableIntent);
-
-            mIntentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-            mIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-            mIntentFilter.addAction(BluetoothDevice.ACTION_FOUND);
-            getActivity().registerReceiver(mReceiver, mIntentFilter);
             mBluetoothAdapter.startDiscovery();
         } else {
-            Intent discoverableIntent =
-                    new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-            startActivity(discoverableIntent);
-
             mIntentFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
             mIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
             mIntentFilter.addAction(BluetoothDevice.ACTION_FOUND);

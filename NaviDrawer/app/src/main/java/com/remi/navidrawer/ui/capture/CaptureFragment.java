@@ -58,6 +58,7 @@ public class CaptureFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         /* ((MainActivity) getActivity()).getFloatingActionButton().hide();
         getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);*/
+        ((MainActivity) getActivity()).getSupportActionBar().hide();
         CaptureViewModel captureViewModel =
                 new ViewModelProvider(this).get(CaptureViewModel.class);
 
@@ -200,6 +201,6 @@ public class CaptureFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-       /* ((MainActivity) getActivity()).getSupportActionBar().hide();*/
+       /* */
     }
 }
