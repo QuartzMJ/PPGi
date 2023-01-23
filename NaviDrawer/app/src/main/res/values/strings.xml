@@ -1,4 +1,5 @@
 <resources>
+
     <string name="app_name">PPGi</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -48,4 +49,11 @@ Our PPG results suggest that not only pulsatility but also phase information reg
     <string name="opencv_links">https://opencv.org/</string>
     <string name="green_channels">Among the RGB Channels,the green channel featuring the strongest plethysmographic signal, corresponding to an absorption peak by (oxy-) hemoglobin, the red and blue channels also contained plethysmographic information. The results show that ambient light photo-plethysmography may be useful for medical purposes such as characterization of vascular skin lesions (e.g., port wine stains) and remote sensing of vital signs (e.g., heart and respiration rates) for triage or sports purposes.</string>
     <string name="green_details">place holder</string>
+    <string name="title_activity_offline_measure">OfflineMeasureActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="dialog_message">Please tell us wether the selected video is portrait or landscape</string>
+    <string name="dialog_title">Rotation of this video</string>
+    <string name="ok">Next</string>
+    <string name="cancel">Cancel</string>
 </resources>

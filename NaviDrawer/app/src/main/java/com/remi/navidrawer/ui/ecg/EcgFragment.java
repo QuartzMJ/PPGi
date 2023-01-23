@@ -41,6 +41,7 @@ public class EcgFragment extends Fragment {
     private int BLUETOOTH_ENABLE_SUCCESS = -1;
     private EcgViewModel ecgViewModel;
     private EcgCardAdapter mAdapter;
+    private int counting = 0;
     private BluetoothAdapter mBluetoothAdapter;
     private ArrayList<DetectedDevice> mDetectedDevices = new ArrayList<>();
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -72,32 +73,33 @@ public class EcgFragment extends Fragment {
                 } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     DetectedDevice mDetectedDevice = new DetectedDevice();
-                    String deviceClass ="";
-                    BluetoothClass btClass = device.getBluetoothClass();
-
-                    if(btClass.getDeviceClass() == BluetoothClass.Device.COMPUTER_DESKTOP){
-                        deviceClass += "Desktop";
-                    }else if(btClass.getDeviceClass() == BluetoothClass.Device.PHONE_SMART){
-                        deviceClass += "Phone";
-                    }else if(btClass.getDeviceClass() == BluetoothClass.Device.COMPUTER_LAPTOP){
-                        deviceClass += "Laptop";
-                    }else{
-                        deviceClass += "Others";
-                    }
-
 
                     if (device != null) {
-                        Log.d("Bluetooth device found", device.getAddress().toString() + " Class: " + deviceClass );
+                        Log.d("Bluetooth device found", device.getAddress().toString() + " Class: " + device.getBluetoothClass());
                         mDetectedDevice.setDeviceAddress(device.getAddress());
                         if (device.getName() != null) {
-                            Log.d("Bluetooth device found", device.getName().toString() + " Class: " + deviceClass);
+                            Log.d("Bluetooth device found", device.getName().toString() + " Class: " + device.getBluetoothClass());
                             mDetectedDevice.setDeviceName(device.getName());
                         }
+
                         mDetectedDevice.setDeviceType(device.getType());
                         mDetectedDevice.setDeviceBluetoothClass(device.getBluetoothClass());
-                        mDetectedDevices.add(mDetectedDevice);
-                        ecgViewModel.updateCards(mDetectedDevices);
-                        ecgViewModel.getLiveEcgCards().observe(getViewLifecycleOwner(), updateObserver);
+
+                        boolean testExistence = false;
+                        for (DetectedDevice dt : mDetectedDevices) {
+                            if (dt.getDeviceAddress().equals(mDetectedDevice.getDeviceAddress())) {
+                                testExistence = true;
+                            }
+                        }
+
+
+                        if (!testExistence) {
+
+                            mDetectedDevices.add(mDetectedDevice);
+                            ecgViewModel.updateCards(mDetectedDevice);
+                            ecgViewModel.getLiveEcgCards().observe(getViewLifecycleOwner(), updateObserver);
+                        }
+                        counting++;
                     }
                 }
             }
@@ -140,7 +142,6 @@ public class EcgFragment extends Fragment {
         setDiscoverable();
         scanBluetoothDevice();
 
-
         return root;
     }
 
@@ -175,6 +176,15 @@ public class EcgFragment extends Fragment {
                     getActivity(),
                     new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1
             );
+            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+            if (pairedDevices.size() > 0) {
+                // There are paired devices. Get the name and address of each paired device.
+                for (BluetoothDevice device : pairedDevices) {
+                    String deviceName = device.getName();
+                    String deviceHardwareAddress = device.getAddress(); // MAC address
+                    Log.d("Paired device ", deviceName + " with " + deviceHardwareAddress);
+                }
+            }
         } else {
             Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
             if (pairedDevices.size() > 0) {
@@ -193,10 +203,15 @@ public class EcgFragment extends Fragment {
                 new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
         discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
         startActivity(discoverableIntent);
+    }
 
-}
     public void scanBluetoothDevice() {
 
+        mDetectedDevices = new ArrayList<>();
+        ecgViewModel.freeList();
+        ecgViewModel.getLiveEcgCards().observe(getViewLifecycleOwner(), updateObserver);
+
+        
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     getActivity(),

@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 
@@ -14,11 +15,13 @@ import android.view.Menu;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.remi.navidrawer.databinding.ActivityMainBinding;
+import com.remi.navidrawer.ui.dialogs.DirectionAlertDialogFragment;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -29,11 +32,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements DirectionAlertDialogFragment.NoticeDialogListener {
 
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainBinding binding;
     private List<String> mPermissionList = new ArrayList<>();
+    private int mDirection;
+    private String mFilePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +83,21 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    @Override
+    public void onDialogPositiveClick(DialogFragment dialog, int result) {
+        mDirection = result;
+        Intent mIntent = new Intent(this, OfflineMeasureActivity.class);
+        mIntent.putExtra("Filename", mFilePath);
+        mIntent.putExtra("Direction", mDirection);
+        Log.d("Azusa strike!", "Filepath: " + mFilePath + " Direction: " + Integer.toHexString(mDirection));
+        startActivity(mIntent);
+    }
+
+    @Override
+    public void onDialogNegativeClick(DialogFragment dialog) {
+
+    }
+
     static class Configuration {
         public static final String TAG = "CameraxBasic";
         public static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
@@ -115,13 +135,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void initPermission(){
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
-            // Android 版本大于等于 Android12 时
-            // 只包括蓝牙这部分的权限，其余的需要什么权限自己添加
+
             mPermissionList.add(Manifest.permission.BLUETOOTH_SCAN);
             mPermissionList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
             mPermissionList.add(Manifest.permission.BLUETOOTH_CONNECT);
         } else {
-            // Android 版本小于 Android12 及以下版本
+
             mPermissionList.add(Manifest.permission.ACCESS_COARSE_LOCATION);
             mPermissionList.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
@@ -129,5 +148,13 @@ public class MainActivity extends AppCompatActivity {
         if(mPermissionList.size() > 0){
             ActivityCompat.requestPermissions(this,mPermissionList.toArray(new String[0]),1001);
         }
+    }
+
+    public int getVideoDirection() {
+        return mDirection;
+    }
+
+    public void setFilePath(String path) {
+        mFilePath = path;
     }
 }

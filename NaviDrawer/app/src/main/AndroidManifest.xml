@@ -3,7 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.camera.any" />
-    <uses-feature android:name="android.hardware.bluetooth" android:required="true"/>
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="true" />
+
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -28,6 +31,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NaviDrawer"
         tools:targetApi="31">
+        <activity
+            android:name=".OfflineMeasureActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:exported="false"
+            android:label="@string/title_activity_offline_measure"
+            android:theme="@style/Theme.NaviDrawer.Fullscreen" />
         <activity
             android:name=".Runtime_measureactivity"
             android:exported="false">

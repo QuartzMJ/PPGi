@@ -19,7 +19,7 @@ import java.util.ArrayList;
 public class EcgCardAdapter extends RecyclerView.Adapter<EcgCardAdapter.Itemholder> {
     private ArrayList<EcgCards> mEcgCards;
 
-    public EcgCardAdapter(){
+    public EcgCardAdapter() {
         this.mEcgCards = new ArrayList<EcgCards>();
     }
 
@@ -34,18 +34,22 @@ public class EcgCardAdapter extends RecyclerView.Adapter<EcgCardAdapter.Itemhold
     @Override
     public void onBindViewHolder(@NonNull EcgCardAdapter.Itemholder holder, int position) {
         EcgCards mContentCard = mEcgCards.get(position);
-        holder.getDeviceName().setText(mContentCard.getDeviceName());
+        if (mContentCard.getDeviceName() ==null ) {
+            holder.getDeviceName().setText("Name: Unknown");
+        } else {
+            holder.getDeviceName().setText("Name: " + mContentCard.getDeviceName());
+        }
         holder.getDeviceClass().setText(mContentCard.getText());
-        holder.getDeviceAddress().setText(mContentCard.getDeviceAddress());
+        holder.getDeviceAddress().setText("MAC:" + mContentCard.getDeviceAddress());
         holder.getDeviceImage().setImageResource(mContentCard.getPic());
 
     }
 
     public void updateEcgCardList(ArrayList<EcgCards> cardArrayList) {
-        Log.d("Momoi,Go", "BangBangKaBang" +"  Length before: "+ mEcgCards.size());
+
         this.mEcgCards.clear();
         this.mEcgCards.addAll(cardArrayList);
-        Log.d("Momoi,Go", "BangBangKaBang" +"  Length after: "+ mEcgCards.size());
+
         notifyDataSetChanged();
 
     }
@@ -55,13 +59,13 @@ public class EcgCardAdapter extends RecyclerView.Adapter<EcgCardAdapter.Itemhold
         return mEcgCards.size();
     }
 
-    public static class Itemholder extends RecyclerView.ViewHolder{
+    public static class Itemholder extends RecyclerView.ViewHolder {
         private final TextView mDeviceClass;
         private final TextView mDeviceName;
         private final TextView mDeviceAddress;
         private final ImageView mDeviceImage;
 
-        public Itemholder(View view){
+        public Itemholder(View view) {
             super(view);
             mDeviceName = view.findViewById(R.id.btName);
             mDeviceClass = view.findViewById(R.id.btType);
@@ -69,19 +73,19 @@ public class EcgCardAdapter extends RecyclerView.Adapter<EcgCardAdapter.Itemhold
             mDeviceImage = view.findViewById(R.id.btImage);
         }
 
-        public TextView getDeviceName(){
+        public TextView getDeviceName() {
             return mDeviceName;
         }
 
-        public TextView getDeviceClass(){
+        public TextView getDeviceClass() {
             return mDeviceClass;
         }
 
-        public TextView getDeviceAddress(){
+        public TextView getDeviceAddress() {
             return mDeviceAddress;
         }
 
-        public ImageView getDeviceImage(){
+        public ImageView getDeviceImage() {
             return mDeviceImage;
         }
     }

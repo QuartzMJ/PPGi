@@ -34,7 +34,7 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/startDiscover"
-                android:text="Start Discover"
+                android:text="Set Discoverable"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintTop_toTopOf="parent"
@@ -45,7 +45,7 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/refreshList"
-                android:text="Refresh"
+                android:text="Discover"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintTop_toTopOf="parent"
