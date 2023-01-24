@@ -7,27 +7,22 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
 import android.view.Menu;
 
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.navigation.NavigationView;
-import com.remi.navidrawer.databinding.ActivityMainBinding;
-import com.remi.navidrawer.ui.dialogs.DirectionAlertDialogFragment;
-
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.DialogFragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.navigation.NavigationView;
+import com.remi.navidrawer.databinding.ActivityMainBinding;
+import com.remi.navidrawer.ui.dialogs.DirectionAlertDialogFragment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements DirectionAlertDia
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.nav_home, R.id.nav_capture,R.id.nav_gallery, R.id.nav_ecg,R.id.nav_history,R.id.nav_about,R.id.nav_contact)
+                R.id.nav_home, R.id.nav_capture, R.id.nav_gallery, R.id.nav_ecg, R.id.nav_history, R.id.nav_about, R.id.nav_contact)
                 .setOpenableLayout(drawer)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
@@ -87,9 +82,8 @@ public class MainActivity extends AppCompatActivity implements DirectionAlertDia
     public void onDialogPositiveClick(DialogFragment dialog, int result) {
         mDirection = result;
         Intent mIntent = new Intent(this, OfflineMeasureActivity.class);
-        mIntent.putExtra("Filename", mFilePath);
-        mIntent.putExtra("Direction", mDirection);
-        Log.d("Azusa strike!", "Filepath: " + mFilePath + " Direction: " + Integer.toHexString(mDirection));
+        mIntent.putExtra("Filepath", mFilePath);
+        mIntent.putExtra("Orientation", mDirection);
         startActivity(mIntent);
     }
 
@@ -109,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements DirectionAlertDia
                                 Manifest.permission.RECORD_AUDIO,
                                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                 Manifest.permission.READ_EXTERNAL_STORAGE
-        } :
+                        } :
                         new String[]{Manifest.permission.CAMERA,
                                 Manifest.permission.RECORD_AUDIO,
                                 Manifest.permission.MANAGE_EXTERNAL_STORAGE};
@@ -133,8 +127,8 @@ public class MainActivity extends AppCompatActivity implements DirectionAlertDia
                 || super.onSupportNavigateUp();
     }
 
-    private void initPermission(){
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+    private void initPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 
             mPermissionList.add(Manifest.permission.BLUETOOTH_SCAN);
             mPermissionList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
@@ -145,8 +139,8 @@ public class MainActivity extends AppCompatActivity implements DirectionAlertDia
             mPermissionList.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
-        if(mPermissionList.size() > 0){
-            ActivityCompat.requestPermissions(this,mPermissionList.toArray(new String[0]),1001);
+        if (mPermissionList.size() > 0) {
+            ActivityCompat.requestPermissions(this, mPermissionList.toArray(new String[0]), 1001);
         }
     }
 

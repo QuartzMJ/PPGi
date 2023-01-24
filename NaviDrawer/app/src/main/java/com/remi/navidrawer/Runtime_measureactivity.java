@@ -1,24 +1,22 @@
 package com.remi.navidrawer;
 
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.codingending.popuplayout.*;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.codingending.popuplayout.PopupLayout;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
@@ -27,8 +25,8 @@ import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
-import org.opencv.core.MatOfDouble;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -40,7 +38,6 @@ import org.opencv.objdetect.CascadeClassifier;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,7 +52,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
     private JavaCameraView javaCameraView;
     private int cameraId = 1; // 0 for back camera, 1 for front camera
-    private CascadeClassifier mFaceDetector, mNoseDetector;
+    private CascadeClassifier mFaceDetector;
     private File mCascadeFile;
     private static final String TAG = "OCVSample::Activity";
     private float mRelativeFaceSize = 0.2f;
@@ -65,7 +62,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     private ArrayList<RawPPGIValue> mRawPPGIVals;
     private ArrayList<RawPPGIValue> mPeakPPGIVals;
-    private RawPPGIValue mRearValue;
+    private RawPPGIValue mLastValue;
     private int mFramesCount = 0;
     private long mCurrentMiliseconds;
     private ArrayList<Integer> mBpmCandidates = new ArrayList<Integer>();
@@ -122,11 +119,11 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         if (savedInstanceState == null) {
             mRawPPGIVals = new ArrayList<RawPPGIValue>();
             mPeakPPGIVals = new ArrayList<RawPPGIValue>();
-            mRearValue = null;
+            mLastValue = null;
         } else {
             mRawPPGIVals = savedInstanceState.getParcelableArrayList("RawValue List");
             mPeakPPGIVals = savedInstanceState.getParcelableArrayList("PeakValue List");
-            mRearValue = savedInstanceState.getParcelable("Rear");
+            mLastValue = savedInstanceState.getParcelable("Rear");
         }
 
         javaCameraView = findViewById(R.id.javaCameraView);
@@ -303,15 +300,18 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelableArrayList("RawValue List", mRawPPGIVals);
         savedInstanceState.putParcelableArrayList("PeakValue List", mPeakPPGIVals);
-        savedInstanceState.putParcelable("Rear", mRearValue);
+        savedInstanceState.putParcelable("Rear", mLastValue);
     }
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         Mat frame = new Mat();
         mCurrentMiliseconds = Calendar.getInstance().getTimeInMillis();
+
+
         // in case of portrait, set the frame into correct rotation
         // but it uses landscape orientation as default, nothing to modify here
+
         if (getResources().getConfiguration().orientation == 2) {
             frame = inputFrame.rgba();
             //  absolute face size initialization
@@ -341,7 +341,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     startMeasure(faceROI, frame, facesArray[i].tl());
                 }
             } else {
-                 if (mDropFrames >= 30) {
+                if (mDropFrames >= 30) {
                     mRawPPGIVals.removeAll(mRawPPGIVals);
                     mFramesCount = 0;
 
@@ -358,7 +358,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                                 }
                             });
                             popupLayout.setHeight(120, true);
-                            popupLayout.setWidth(360,true);
+                            popupLayout.setWidth(360, true);
                             popupLayout.show(PopupLayout.POSITION_TOP);
                             popupLayout.show();
                         }
@@ -455,7 +455,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
             }
 
-
             Mat returnFrame = new Mat();
             if (cameraId == 0) {
                 Mat rotatedMat = Imgproc.getRotationMatrix2D(new Point(rotatedFrame.cols() / 2, rotatedFrame.rows() / 2), 90, 1);
@@ -474,9 +473,6 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
                 Imgproc.warpAffine(rotatedFrame, returnFrame, rotatedMat, frame.size());
             }
-            Log.d("Frame Size Check", "Frame: " + frame.size().toString());
-            Log.d("Frame Size Check", "RoatedFrame: " + rotatedFrame.size().toString());
-            Log.d("Frame Size Check", "ReturnFrame: " + returnFrame.size().toString());
             return returnFrame;
         }
     }
@@ -510,9 +506,9 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     }
 
     public void addAndDetermine(Float rawValue) {
-        mRearValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
+        mLastValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
         //printRawValueAsText(mRearValue);
-        updateRawValues(mRearValue, true);
+        updateRawValues(mLastValue, true);
     }
 
     public void updateRawValues(RawPPGIValue rawValue, boolean validity) {
@@ -529,7 +525,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mFramesCount++;
         } else {
             calculateHeartRate();
-            mFramesCount = 0;
+            mFramesCount = 60;
         }
     }
 
@@ -590,7 +586,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             if (!candidate.getValidity()) {
                 corruptionCount++;
             }
-            if (i < 20 || i > 160) {   // not into consideration for too few samples in surroundings;
+            if (i < 30 || i > 180 - mOffset - mPreset - 1) {   // not into consideration for too few samples in surroundings;
                 continue;
             }
 
@@ -609,7 +605,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                     valid += 1;
             }
 
-            if (valid < 2 * mOffset - 1) {
+            if (valid < 2 * mOffset - 2) {
                 continue Out;
             }
             Log.d("DVDCheck", "I am here! ");
@@ -631,11 +627,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
                 msg += "Applying preset, please wait...";
                 if (160 >= BPM && BPM >= 120) {
                     adaptedPreset = 12;
-                    adaptedOffset = 6;
+                    adaptedOffset = 7;
                     isAdapted = true;
                 } else if (BPM < 120) {
                     adaptedPreset = 15;
                     adaptedOffset = 8;
+                    isAdapted = true;
                 }
             } else {
                 BpmList.add(BPM);
@@ -655,7 +652,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             public void run() {
                 TextView tv = findViewById(R.id.tv_heartrate);
                 tv.setText(message);
-            }});
+            }
+        });
     }
 
     public int calcaulateAverages() {

@@ -1,193 +1,454 @@
 package com.remi.navidrawer;
 
-import android.annotation.SuppressLint;
-
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
+import android.graphics.Bitmap;
+import android.media.ThumbnailUtils;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowInsets;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.remi.navidrawer.databinding.ActivityOfflineMeasureBinding;
 
-/**
- * An example full-screen activity that shows and hides the system UI (i.e.
- * status bar and navigation/system bar) with user interaction.
- */
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.videoio.VideoCapture;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
 public class OfflineMeasureActivity extends AppCompatActivity {
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
-    private static final boolean AUTO_HIDE = true;
 
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
-
-    /**
-     * Some older devices needs a small delay between UI widget updates
-     * and a change of the status and navigation bar.
-     */
-    private static final int UI_ANIMATION_DELAY = 300;
-    private final Handler mHideHandler = new Handler(Looper.myLooper());
-    private View mContentView;
-    private final Runnable mHidePart2Runnable = new Runnable() {
-        @SuppressLint("InlinedApi")
-        @Override
-        public void run() {
-            // Delayed removal of status and navigation bar
-            if (Build.VERSION.SDK_INT >= 30) {
-                mContentView.getWindowInsetsController().hide(
-                        WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-            } else {
-                // Note that some of these constants are new as of API 16 (Jelly Bean)
-                // and API 19 (KitKat). It is safe to use them, as they are inlined
-                // at compile-time and do nothing on earlier devices.
-                mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-            }
-        }
-    };
-    private View mControlsView;
-    private final Runnable mShowPart2Runnable = new Runnable() {
-        @Override
-        public void run() {
-            // Delayed display of UI elements
-            ActionBar actionBar = getSupportActionBar();
-            if (actionBar != null) {
-                actionBar.show();
-            }
-            mControlsView.setVisibility(View.VISIBLE);
-        }
-    };
-    private boolean mVisible;
-    private final Runnable mHideRunnable = new Runnable() {
-        @Override
-        public void run() {
-            hide();
-        }
-    };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            switch (motionEvent.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (AUTO_HIDE) {
-                        delayedHide(AUTO_HIDE_DELAY_MILLIS);
-                    }
-                    break;
-                case MotionEvent.ACTION_UP:
-                    view.performClick();
-                    break;
-                default:
-                    break;
-            }
-            return false;
-        }
-    };
+    private String TAG = "Mika punch";
+    private Mat imageMat;
     private ActivityOfflineMeasureBinding binding;
+    private File mCascadeFile;
+    private int facedFrame = 0;
+    private float mRelativeFaceSize = 0.2f;
+    private int mAbsoluteFaceSize = 0;
+    private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
+    private CascadeClassifier mFaceDetector;
+    private int mOrientation;
+    private RawPPGIValue mLastValue;
+    private long mCurrentMiliseconds = 0;
+    private int mDropFrames = 0;
+    private int mFramesCount = 0;
+    private int defaultPreset = 9;
+    private int defaultOffset = 9;
+    private int adaptedPreset;
+    private Bitmap bitmap;
+    private int adaptedOffset;
+    private int analyzedFrameCount = 0;
+    private boolean isAdapted = false;
+    private int mLastBpm = 0;
+    private ArrayList<Integer> BpmList = new ArrayList<Integer>();
+    private ArrayList<RawPPGIValue> mRawPPGIVals;
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS: {
+                    Log.i("OpenCV", "OpenCV loaded successfully");
+                    imageMat = new Mat();
+                }
+                break;
+                default: {
+                    super.onManagerConnected(status);
+                }
+                break;
+            }
+        }
+    };
+
+    static {
+        System.loadLibrary("opencv_java4");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         binding = ActivityOfflineMeasureBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        mVisible = true;
-        mControlsView = binding.fullscreenContentControls;
-        mContentView = binding.fullscreenContent;
+        Intent mIntent = getIntent();
+        String filePath = mIntent.getStringExtra("Filepath");
+        mOrientation = mIntent.getIntExtra("Orientation", 0);
+        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
 
-        // Set up the user interaction to manually show or hide the system UI.
-        mContentView.setOnClickListener(new View.OnClickListener() {
+        mRawPPGIVals = new ArrayList<RawPPGIValue>();
+
+        File in = new File(filePath);
+        if (!in.exists()) {
+            Log.d("Mika punch", "File not found");
+            return;
+        } else {
+            Log.d("Mika punch", "File found");
+        }
+
+        Button infoBtn = binding.infoBtn;
+        Button startBtn = binding.startBtn;
+
+        startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                toggle();
+            public void onClick(View v) {
+                Thread thread = new Thread() {
+                    public void run() {
+                        VideoCapture vc = new VideoCapture(filePath);
+                        analyseVideo(vc);
+                    }
+                };
+                thread.start();
             }
         });
 
-        Intent mIntent = getIntent();
-        String fileName = mIntent.getStringExtra("Filename");
-        Log.d("Yuzu Queen",fileName);
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        binding.dummyButton.setOnTouchListener(mDelayHideTouchListener);
+
+        ImageView thumbnail = binding.videoThumbnail;
+        Bitmap bitmap;
+        bitmap = ThumbnailUtils.createVideoThumbnail(filePath, MediaStore.Video.Thumbnails.FULL_SCREEN_KIND);
+        thumbnail.setImageBitmap(bitmap);
+    }
+
+    public int getFrameCount(String filepath) {
+
+        VideoCapture videoCapture = new VideoCapture(filepath);
+        Mat frame = new Mat();
+        int index = 0;
+        while (videoCapture.read(frame)) {
+            index += 1;
+        }
+        return index;
+    }
+
+    public void analyseVideo(VideoCapture videoCapture) {
+        Mat frame = new Mat();
+
+        while (videoCapture.read(frame)) {
+            analyseFrame(frame);
+        }
+    }
+
+    public void analyseFrame(Mat inputFrame) {
+        Mat frame = inputFrame;
+        mCurrentMiliseconds = analyzedFrameCount * 33;
+        analyzedFrameCount++;
+
+        if (mAbsoluteFaceSize == 0) {    // only called at the beginning of the activity
+            int height = frame.rows();
+            if (Math.round(height * mRelativeFaceSize) > 0) {
+                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+            }
+        }
+
+
+        if (mOrientation == 2) {             // in case of landscape
+            frame = inputFrame;
+
+
+            MatOfRect faces = new MatOfRect();
+            if (mFaceDetector != null) {
+                mFaceDetector.detectMultiScale(frame, faces, 1.1, 2, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+            }
+
+            Rect[] facesArray = faces.toArray();
+            if (facesArray.length > 0) {
+                if (mDropFrames > 0) {
+                    mDropFrames = 0;
+                }
+                for (int i = 0; i < facesArray.length; i++) {
+
+                    Mat faceROI = frame.submat(facesArray[i]);  // take out the value from the array one by one, in this case only one iteration
+                    startMeasure(faceROI, frame, facesArray[i].tl());
+
+                }
+            } else {
+                if (mDropFrames >= 30) {
+                    mRawPPGIVals.removeAll(mRawPPGIVals);
+                    mFramesCount = 0;
+                    mDropFrames = 0;
+                }
+                mDropFrames++;
+            }
+        } else {             // in case of portrait mode
+
+        }
+
     }
 
     @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-        delayedHide(100);
-    }
-
-    private void toggle() {
-        if (mVisible) {
-            hide();
+    public void onResume() {
+        super.onResume();
+        mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
+        if (!OpenCVLoader.initDebug()) {
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
         } else {
-            show();
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
     }
 
-    private void hide() {
-        // Hide UI first
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.hide();
-        }
-        mControlsView.setVisibility(View.GONE);
-        mVisible = false;
+    private CascadeClassifier loadDetector(int rawID, String fileName) {
+        CascadeClassifier classifier = null;
+        try {
 
-        // Schedule a runnable to remove the status and navigation bar after a delay
-        mHideHandler.removeCallbacks(mShowPart2Runnable);
-        mHideHandler.postDelayed(mHidePart2Runnable, UI_ANIMATION_DELAY);
+            // load cascade file from application resources
+            InputStream is = getResources().openRawResource(rawID);
+            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+            mCascadeFile = new File(cascadeDir, fileName);
+            FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            is.close();
+            os.close();
+
+            classifier = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+
+            if (classifier.empty()) {
+                classifier = null;
+            } else
+                cascadeDir.delete();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
+        }
+        return classifier;
     }
 
-    private void show() {
-        // Show the system bar
-        if (Build.VERSION.SDK_INT >= 30) {
-            mContentView.getWindowInsetsController().show(
-                    WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+    public void startMeasure(Mat face, Mat frame, Point startingPoint) {
+
+        int foreheadHeight = face.rows() / 6;
+        int foreheadWidth = 3 * face.cols() / 5;
+
+        int startingX = (int) startingPoint.x + (int) face.cols() / 5;
+        int startingY = (int) startingPoint.y + face.rows() / 12;
+
+        Rect foreheadROI = new Rect(startingX, startingY, foreheadWidth, foreheadHeight);
+        Imgproc.rectangle(frame, foreheadROI.tl(), foreheadROI.br(), FACE_RECT_COLOR, 3);
+        Mat croppedFrame = new Mat(frame, foreheadROI);
+
+        if (analyzedFrameCount % 15 == 0) {
+
+
+            String path = Environment.getExternalStoragePublicDirectory("ppgi").getAbsolutePath() + "/" + Integer.toString(analyzedFrameCount) + ".png";
+            File file = new File(path);
+            Imgcodecs.imwrite(file.getAbsolutePath(), frame);
+            Log.d("Akane run", file.getAbsolutePath());
+
+            bitmap = Bitmap.createBitmap(frame.cols(), frame.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(frame, bitmap);
+
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    binding.videoThumbnail.setImageBitmap(bitmap);
+                }
+            });
+
+        }
+
+        Log.d("Akane run", Integer.toString(analyzedFrameCount));
+        calculateRaw(croppedFrame);
+    }
+
+    public void calculateRaw(Mat forehead) {
+        List<Mat> channels = new ArrayList<Mat>();
+        Core.split(forehead, channels);
+        Mat mGreenChannel = channels.get(1);
+
+        MatOfDouble mMeanValue = new MatOfDouble();
+        MatOfDouble mStdDev = new MatOfDouble();
+        Core.meanStdDev(mGreenChannel, mMeanValue, mStdDev);
+        Double mean = mMeanValue.toList().get(0);
+        Float tmp = mean.floatValue();
+        Log.d("Kuroko riding", Float.toString(tmp));
+
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                int raw = Math.round(tmp);
+                String msg = "Raw Value: " + Integer.toString(raw);
+                TextView tv = binding.rawValue;
+                tv.setText(msg);
+            }
+
+            ;
+        });
+        addAndDetermine(tmp);
+        // calculate Raw values here
+    }
+
+    public void addAndDetermine(Float rawValue) {
+        mLastValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
+        //printRawValueAsText(mRearValue);
+        updateRawValues(mLastValue, true);
+    }
+
+    public void updateRawValues(RawPPGIValue rawValue, boolean validity) {
+        if (mRawPPGIVals.size() > 1) {
+            if (rawValue.getValue() >= 1.8 * mRawPPGIVals.get(mRawPPGIVals.size() - 1).getValue()) {
+                return;
+            }
+        }
+        if (mRawPPGIVals.size() == 180) {
+            ArrayList<RawPPGIValue> tmp = new ArrayList<RawPPGIValue>(mRawPPGIVals.subList(1, 180));
+            mRawPPGIVals = tmp;
+            mRawPPGIVals.add(rawValue);
         } else {
-            mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            mRawPPGIVals.add(rawValue);
         }
-        mVisible = true;
 
-        // Schedule a runnable to display UI elements after a delay
-        mHideHandler.removeCallbacks(mHidePart2Runnable);
-        mHideHandler.postDelayed(mShowPart2Runnable, UI_ANIMATION_DELAY);
+        if (mFramesCount < 180) {
+            mFramesCount++;
+        } else {
+            calculateHeartRate();
+            mFramesCount = 60;
+        }
     }
 
-    /**
-     * Schedules a call to hide() in delay milliseconds, canceling any
-     * previously scheduled calls.
-     */
-    private void delayedHide(int delayMillis) {
-        mHideHandler.removeCallbacks(mHideRunnable);
-        mHideHandler.postDelayed(mHideRunnable, delayMillis);
+    public void calculateHeartRate() {
+
+        int corruptionCount = 0;
+        String msg = "";
+        int peakCounts = 0;
+        int startIndex = 0;
+        int endIndex = 0;
+        int mPreset;
+        int mOffset;
+
+
+        if (isAdapted) {
+            mPreset = adaptedPreset;
+            mOffset = adaptedOffset;
+        } else {
+            mPreset = defaultPreset;
+            mOffset = defaultOffset;
+        }
+
+
+        Out:
+        for (int i = 0; i < mRawPPGIVals.size(); i++) {
+            RawPPGIValue candidate = mRawPPGIVals.get(i);
+            if (i < 60 || i > (180 - mPreset - mOffset - 2)) {   // not into consideration for too few samples in surroundings;
+                continue;
+            }
+
+            for (int j = 1; j < mPreset; j++) {
+                if (candidate.getValue() < mRawPPGIVals.get(i - j).getValue() || candidate.getValue() < mRawPPGIVals.get(i + j).getValue()) {
+                    continue Out;
+                }
+            }
+
+            int valid = 0;
+            for (int j = mPreset; j < mPreset + mOffset; j++) {
+                if (candidate.getValue() > mRawPPGIVals.get(i - j).getValue())
+                    valid += 1;
+
+                if (candidate.getValue() > mRawPPGIVals.get(i + j).getValue())
+                    valid += 1;
+            }
+
+            if (valid < 2 * mOffset - 2) {
+                continue Out;
+            }
+
+            if (peakCounts == 0) {
+                startIndex = i;
+            }
+            peakCounts++;
+            endIndex = i;
+        }
+
+        Log.d("Hoshino jump", "Start index:" + Integer.toString(startIndex) + " End index:" + Integer.toString(endIndex));
+        Log.d("Hoshino jump", "Peak count:" + Integer.toString(peakCounts));
+        Log.d("Hoshino jump", "Start time:" + Long.toString(mRawPPGIVals.get(startIndex).getCurrentTime()));
+        Log.d("Hoshino jump", "End time:" + Long.toString(mRawPPGIVals.get(endIndex).getCurrentTime()));
+        long timeDistance = mRawPPGIVals.get(endIndex).getCurrentTime() - mRawPPGIVals.get(startIndex).getCurrentTime();
+        int BPM = Math.round(990 * 60 * (peakCounts - 1) / timeDistance);
+        Log.d("Initial BPM", Integer.toString(BPM));
+
+        int mCandidateBpm;
+        if (!isAdapted) {
+            msg += "Applying preset, please wait...";
+            resetPresets(BPM);
+            mCandidateBpm = BPM;
+            isAdapted = true;
+            mLastBpm = BPM;
+        } else {
+            mCandidateBpm = (BPM + mLastBpm) / 2;
+            mLastBpm = mCandidateBpm;
+            resetPresets(mCandidateBpm);
+            BpmList.add(mCandidateBpm);
+            int outputBPM = calcaulateAverages();
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    String msg = "Heart Rate: " + Integer.toString(outputBPM);
+                    TextView tv = binding.bpm;
+                    tv.setText(msg);
+                }
+            });
+        }
+
+    }
+
+    public int calcaulateAverages() {
+        int listSize = BpmList.size();
+        int sum = 0;
+        if (listSize < 5) {
+            for (int value : BpmList) {
+                sum += value;
+            }
+            return sum / listSize;
+        } else {
+            for (int index = listSize - 5; index < listSize; index++) {
+                sum += BpmList.get(index);
+            }
+            return sum / 5;
+        }
+    }
+
+    public void resetPresets(int bpm) {
+        Log.d("resetPresets", "here");
+        if (bpm < 50) {
+            adaptedPreset = 20;
+            adaptedOffset = 12;
+        } else if (bpm > 50 && bpm < 120) {
+            adaptedPreset = 9;
+            adaptedOffset = 9;
+        } else if (bpm > 120 && bpm < 150) {
+            adaptedPreset = 8;
+            adaptedOffset = 7;
+        } else {
+            adaptedPreset = 7;
+            adaptedOffset = 4;
+        }
     }
 }
