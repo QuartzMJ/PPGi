@@ -64,6 +64,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private ArrayList<RawPPGIValue> mPeakPPGIVals;
     private RawPPGIValue mLastValue;
     private int mFramesCount = 0;
+    private int mLastBpm = 0;
     private long mCurrentMiliseconds;
     private ArrayList<Integer> mBpmCandidates = new ArrayList<Integer>();
     private int mCountDowns = 0;
@@ -71,8 +72,8 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     private int mDropFrames = 0;
     private long mLastDropTime = 0;
     private TimeWindowContainer mContainer;
-    private int defaultPreset = 6;
-    private int defaultOffset = 3;
+    private int defaultPreset = 9;
+    private int defaultOffset = 9;
     private int adaptedPreset;
     private int adaptedOffset;
     private boolean showingPopout = false;
@@ -560,14 +561,12 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
     public void calculateHeartRate() {
 
-        int corruptionCount = 0;
         String msg = "";
         int peakCounts = 0;
         int startIndex = 0;
         int endIndex = 0;
         int mPreset;
         int mOffset;
-
 
         if (isAdapted) {
             mPreset = adaptedPreset;
@@ -577,15 +576,10 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             mOffset = defaultOffset;
         }
 
-
         Out:
         for (int i = 0; i < mRawPPGIVals.size(); i++) {
 
-            Log.d("DVDCheck", "I am here in for! ");
             RawPPGIValue candidate = mRawPPGIVals.get(i);
-            if (!candidate.getValidity()) {
-                corruptionCount++;
-            }
             if (i < 30 || i > 180 - mOffset - mPreset - 1) {   // not into consideration for too few samples in surroundings;
                 continue;
             }
@@ -608,7 +602,7 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
             if (valid < 2 * mOffset - 2) {
                 continue Out;
             }
-            Log.d("DVDCheck", "I am here! ");
+
             if (peakCounts == 0) {
                 startIndex = i;
             }
@@ -618,32 +612,25 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
 
         long timeDistance = mRawPPGIVals.get(endIndex).getCurrentTime() - mRawPPGIVals.get(startIndex).getCurrentTime();
         int BPM = Math.round(1000 * 60 * peakCounts / timeDistance);
-        Log.d("Initial BPM", Integer.toString(BPM));
 
-        if (corruptionCount >= 20) {
-            msg += corruptionCount + "/150 corrupted samples,the result could be inaccurate!\n";
+
+        if (!isAdapted) {
+            msg += "Applying preset, please wait...";
+            resetPresets(BPM);
+            isAdapted = true;
+            mLastBpm = BPM;
         } else {
-            if (!isAdapted) {
-                msg += "Applying preset, please wait...";
-                if (160 >= BPM && BPM >= 120) {
-                    adaptedPreset = 12;
-                    adaptedOffset = 7;
-                    isAdapted = true;
-                } else if (BPM < 120) {
-                    adaptedPreset = 15;
-                    adaptedOffset = 8;
-                    isAdapted = true;
-                }
-            } else {
-                BpmList.add(BPM);
+            int mCandidateBpm;
+            mCandidateBpm = (BPM + mLastBpm) / 2;
+            mLastBpm = mCandidateBpm;
+            resetPresets(mCandidateBpm);
+            BpmList.add(mCandidateBpm);
+            int outputBPM = calcaulateAverages();
 
-                int outputBPM = calcaulateAverages();
-                resetPresets(outputBPM);
-
-                msg += "Heart rate: " + Integer.toString(outputBPM);
-                Log.d("Hearte rate", msg);
-            }
+            msg += "Heart rate: " + Integer.toString(outputBPM);
+            Log.d("Hearte rate", msg);
         }
+
 
         String message = msg;
 
@@ -673,32 +660,21 @@ public class Runtime_measureactivity extends CameraActivity implements CameraBri
     }
 
     public void resetPresets(int bpm) {
-        if (adaptedPreset == 6) {
-            if (160 >= bpm && bpm >= 120) {
-                adaptedPreset = 12;
-                adaptedOffset = 6;
-            } else if (bpm < 120) {
-                adaptedPreset = 15;
-                adaptedOffset = 8;
-            }
-        }
-
-        if (adaptedPreset == 12) {
-            if (bpm >= 110) {
-                adaptedPreset = 6;
-                adaptedOffset = 3;
-            } else if (bpm < 65) {
-                adaptedPreset = 15;
-                adaptedOffset = 8;
-            }
-        }
-
-        if (adaptedPreset == 15) {
-            if (bpm >= 70) {
-                adaptedPreset = 12;
-                adaptedOffset = 6;
-            }
+        Log.d("resetPresets", "here");
+        if (bpm < 50) {
+            adaptedPreset = 20;
+            adaptedOffset = 12;
+        } else if (bpm > 50 && bpm < 120) {
+            adaptedPreset = 9;
+            adaptedOffset = 9;
+        } else if (bpm > 120 && bpm < 150) {
+            adaptedPreset = 8;
+            adaptedOffset = 7;
+        } else {
+            adaptedPreset = 7;
+            adaptedOffset = 4;
         }
     }
+    
 
 }

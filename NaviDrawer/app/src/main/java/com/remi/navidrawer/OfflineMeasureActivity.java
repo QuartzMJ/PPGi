@@ -63,6 +63,7 @@ public class OfflineMeasureActivity extends AppCompatActivity {
     private int defaultOffset = 9;
     private int adaptedPreset;
     private Bitmap bitmap;
+    private String filePath;
     private int adaptedOffset;
     private int analyzedFrameCount = 0;
     private boolean isAdapted = false;
@@ -97,7 +98,9 @@ public class OfflineMeasureActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         Intent mIntent = getIntent();
-        String filePath = mIntent.getStringExtra("Filepath");
+        filePath = mIntent.getStringExtra("Filepath");
+
+
         mOrientation = mIntent.getIntExtra("Orientation", 0);
         mFaceDetector = loadDetector(R.raw.lbpcascade_frontalface, "lbpcascade_frontalface.xml");
 
@@ -256,10 +259,25 @@ public class OfflineMeasureActivity extends AppCompatActivity {
 
         if (analyzedFrameCount % 15 == 0) {
 
-
-            String path = Environment.getExternalStoragePublicDirectory("ppgi").getAbsolutePath() + "/" + Integer.toString(analyzedFrameCount) + ".png";
+            String path = Environment.getExternalStoragePublicDirectory("ppgi").getAbsolutePath() + "/" + filePath.substring(25, filePath.length() - 4);
             File file = new File(path);
-            Imgcodecs.imwrite(file.getAbsolutePath(), frame);
+            if (!file.exists()) {
+                if (file.mkdir())
+                    Log.d("Asuna gogo", "created: " + path);
+                else
+                    Log.d("Asuna gogo", "not created: " + path);
+            }
+
+            String framePath = path + "/frames";
+            File frameDir = new File(framePath);
+            if (!frameDir.exists()) {
+                if (frameDir.mkdir())
+                    Log.d("Asuna gogo2", "created: " + path);
+                else
+                    Log.d("Asuna gogo2", "not created: " + path);
+            }
+
+            Imgcodecs.imwrite(frameDir.getAbsolutePath() + "/" + Integer.toString(analyzedFrameCount) + ".png", frame);
             Log.d("Akane run", file.getAbsolutePath());
 
             bitmap = Bitmap.createBitmap(frame.cols(), frame.rows(), Bitmap.Config.ARGB_8888);
@@ -307,7 +325,7 @@ public class OfflineMeasureActivity extends AppCompatActivity {
 
     public void addAndDetermine(Float rawValue) {
         mLastValue = new RawPPGIValue(rawValue, mCurrentMiliseconds);
-        //printRawValueAsText(mRearValue);
+        // printRawValueAsText(mRearValue);
         updateRawValues(mLastValue, true);
     }
 
@@ -343,7 +361,6 @@ public class OfflineMeasureActivity extends AppCompatActivity {
         int mPreset;
         int mOffset;
 
-
         if (isAdapted) {
             mPreset = adaptedPreset;
             mOffset = adaptedOffset;
@@ -351,7 +368,6 @@ public class OfflineMeasureActivity extends AppCompatActivity {
             mPreset = defaultPreset;
             mOffset = defaultOffset;
         }
-
 
         Out:
         for (int i = 0; i < mRawPPGIVals.size(); i++) {
@@ -386,22 +402,16 @@ public class OfflineMeasureActivity extends AppCompatActivity {
             endIndex = i;
         }
 
-        Log.d("Hoshino jump", "Start index:" + Integer.toString(startIndex) + " End index:" + Integer.toString(endIndex));
-        Log.d("Hoshino jump", "Peak count:" + Integer.toString(peakCounts));
-        Log.d("Hoshino jump", "Start time:" + Long.toString(mRawPPGIVals.get(startIndex).getCurrentTime()));
-        Log.d("Hoshino jump", "End time:" + Long.toString(mRawPPGIVals.get(endIndex).getCurrentTime()));
         long timeDistance = mRawPPGIVals.get(endIndex).getCurrentTime() - mRawPPGIVals.get(startIndex).getCurrentTime();
         int BPM = Math.round(990 * 60 * (peakCounts - 1) / timeDistance);
         Log.d("Initial BPM", Integer.toString(BPM));
 
-        int mCandidateBpm;
         if (!isAdapted) {
-            msg += "Applying preset, please wait...";
             resetPresets(BPM);
-            mCandidateBpm = BPM;
             isAdapted = true;
             mLastBpm = BPM;
         } else {
+            int mCandidateBpm;
             mCandidateBpm = (BPM + mLastBpm) / 2;
             mLastBpm = mCandidateBpm;
             resetPresets(mCandidateBpm);
@@ -436,7 +446,6 @@ public class OfflineMeasureActivity extends AppCompatActivity {
     }
 
     public void resetPresets(int bpm) {
-        Log.d("resetPresets", "here");
         if (bpm < 50) {
             adaptedPreset = 20;
             adaptedOffset = 12;
