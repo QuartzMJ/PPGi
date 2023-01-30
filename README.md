@@ -3,6 +3,15 @@
 This is a repo for ppgi heart rate measuring app running on android device. The development of the app is based on Asus Zenpad 3s on Android 7 and has been tested on Android 9.
 The app has two different modes for heart rate measurement, namely a runtime mode for modern high performance devices and an offline mode for legacy low end devices.
 
+## Basic idea behind
+PPG(photoplethysmography) Imaging is a method to measure human vita signs based on light absorption changes on skin and in capillaries, by extracting the PPG signals we are able to determine one’s heart rate, blood pressure , respiration rate and etc.
+
+In this case we use OpenCV to detect human face and calculate the relative position of the forehead for PPG signal readout. Because it sits on adequate capillaries for signal collecting, is single structured and smooth enough to avoid the influence of shadows.
+
+After the region of the interest is detected in opencv, we simply calculate its mean RGB pixel value of this area and select green channel value as our raw PPG signal. As the blood cells absorb mostly the green wave.
+
+After the raw signal is obtained, the heart rate can be calculated as the numbers of raw peak in measure time window divided by measure window, but it requires us to develop a highpass filter to sort out some local peaks. And there are many environmental influences that could cause some sudden peaks like the flickering led light alternating with 50Hz, so it also requires us to know some about signal processing to do the work.
+
 ## Runtime mode 
 Click the floating action button in the home fragment, a camera preview will show up to detect your own face and forehead in bounding boxes with OpenCV. It is set to use the front camera by default, but switchable by clicking the icon at the right corner. 
 
@@ -48,9 +57,18 @@ It can be disabled by simply commenting the following code in OfflineMeasurement
 ## Performance
 The measured result from this app has a huge difference from the value´with medicial equipments for some known reason: Muscle shaking, ambient light influence and misdetection.
 
-Usually it has around 10 to 15 BPM difference in heart rate range of 60-120 and could be even larger as your heart rate goes up.
+It does not provide a satisfying performance at the current moment, usually it has around 10 to 15 BPM difference with the value we measured with a smartband in heart rate range from 60 to 120 in the most time, the difference could be even greater than 20 for heart rate over 120. 
 
-Some possible improvements are on the way after my exams period.
+It is also not able to measure intense heart rate drop/raise before/after sport. And the preset I used in this app to do the filtering might be somehow device dependent, I do not think they are universal for every device/test environment.
+ 
+
+## Possible improvements
+For misdetection of the human face, we could store the positions of human face from previous frames to compare the position in every new detected frame. If misdetection happens, calculate a new position from statistics as replacement.
+
+Peak to Peak distance calculation: Introduce voriance and derivative and other mathematical tools to determine the shape of the window and calculate the preset based on mathematical fact.
+
+Ambient light interference: Apply a stft onto the signal and reduce the noise at the frequency of 50/60, which represents the flickering led light frequency in European/Asian countries .
+
 
 ## Bugs and Issues
 It has some compatiable issues with devices over android 9 because of permission control from android 10, I am tring to fix it in the future after my exams are over. And it would crash to home when you rotate your device at the capture fragment.
